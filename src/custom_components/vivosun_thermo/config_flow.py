@@ -36,7 +36,7 @@ class VivosunThermoConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(self, user_input=None) -> ConfigFlowResult:
         _LOGGER.debug("Attempt to manually add integration")
-        return self.async_abort(reason="Manual configuration is not supported")
+        return self.async_abort(reason="not_supported")
 
     async def async_step_confirm(self, user_input=None) -> ConfigFlowResult:
         _LOGGER.debug(f"Confirming setup {self.device_name} with user input {user_input}")

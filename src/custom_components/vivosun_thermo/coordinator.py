@@ -5,6 +5,7 @@ from typing import Any, TypedDict, cast
 
 from bleak import BleakClient
 
+from homeassistant.components.bluetooth import BluetoothServiceInfoBleak
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
@@ -36,7 +37,7 @@ class SensorData(TypedDict):
 
 
 class VivosunThermoSensorCoordinator(DataUpdateCoordinator):
-    def __init__(self, hass: HomeAssistant, name: str, address: str):
+    def __init__(self, hass: HomeAssistant, name: str, discovery_info: BluetoothServiceInfoBleak):
         super().__init__(
             hass,
             _LOGGER,
@@ -44,7 +45,8 @@ class VivosunThermoSensorCoordinator(DataUpdateCoordinator):
             update_interval=DEFAULT_SCAN_INTERVAL,
             update_method=self._read_sensor_data,
         )
-        self._client = BleakClient(address)
+        self.discovery_info = discovery_info
+        self._client = BleakClient(discovery_info.address)
 
     async def _read_sensor_data(self) -> dict[str, Any]:
         data = await self._read_raw_data(self._client)
