@@ -27,6 +27,7 @@ class VivosunThermoConfigFlow(ConfigFlow, domain=DOMAIN):
         self._abort_if_unique_id_configured()
 
         # Store discovery info for later use
+        self.discovery_info = discovery_info
         self.name = DEVICE_TYPES.get(discovery_info.name, {}).get("name", discovery_info.name)
 
         # Ask the user whether to set up the device
