@@ -1,6 +1,5 @@
 from datetime import date, datetime
 from decimal import Decimal
-from logging import getLogger
 from typing import override
 
 from homeassistant.components.sensor import SensorEntity

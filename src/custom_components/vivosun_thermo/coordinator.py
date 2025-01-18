@@ -1,7 +1,7 @@
 from asyncio import Future, wait_for
 from logging import getLogger
 from struct import unpack_from
-from typing import Any, TypedDict, cast
+from typing import Any, Final, TypedDict, cast
 
 from bleak import BleakClient
 
@@ -9,20 +9,24 @@ from homeassistant.components.bluetooth import BluetoothServiceInfoBleak
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
-from .const import (
-    BLE_COMMAND_UUID,
-    BLE_READ_TIMEOUT,
-    BLE_SENSOR_COMMAND,
-    BLE_STATUS_UUID,
-    DEFAULT_SCAN_INTERVAL,
-    EXTERNAL_HUMIDITY_OFFSET,
-    EXTERNAL_TEMP_OFFSET,
-    MAIN_HUMIDITY_OFFSET,
-    MAIN_TEMP_OFFSET,
-    VALUE_NONE,
-)
+from .const import DEFAULT_SCAN_INTERVAL
 
 _LOGGER = getLogger(__name__)
+
+_BLE_SENSOR_COMMAND = bytearray([0x0D])
+
+_BLE_COMMAND_UUID: Final = "0000fff5-0000-1000-8000-00805f9b34fb"
+_BLE_STATUS_UUID: Final = "0000fff3-0000-1000-8000-00805f9b34fb"
+
+_BLE_READ_TIMEOUT: Final = 1
+_BLE_CONNECT_TIMEOUT: Final = 30
+
+_MAIN_TEMP_OFFSET: Final = 1
+_MAIN_HUMIDITY_OFFSET: Final = 3
+_EXTERNAL_TEMP_OFFSET: Final = 7
+_EXTERNAL_HUMIDITY_OFFSET: Final = 9
+
+_VALUE_NONE: Final = -1
 
 
 class ProbeData(TypedDict):
@@ -46,7 +50,7 @@ class VivosunThermoSensorCoordinator(DataUpdateCoordinator):
             update_method=self._read_sensor_data,
         )
         self.discovery_info = discovery_info
-        self._client = BleakClient(discovery_info.address)
+        self._client = BleakClient(discovery_info.address, conect_timeout=_BLE_CONNECT_TIMEOUT)
 
     async def _read_sensor_data(self) -> dict[str, Any]:
         data = await self._read_raw_data(self._client)
@@ -56,10 +60,10 @@ class VivosunThermoSensorCoordinator(DataUpdateCoordinator):
     async def _read_raw_data(client: BleakClient) -> bytearray:
         async with client:
             future = Future()
-            await client.start_notify(BLE_STATUS_UUID, lambda _, d: future.set_result(d))
-            await client.write_gatt_char(BLE_COMMAND_UUID, BLE_SENSOR_COMMAND)
-            data = await wait_for(future, BLE_READ_TIMEOUT)
-            await client.stop_notify(BLE_STATUS_UUID)
+            await client.start_notify(_BLE_STATUS_UUID, lambda _, d: future.set_result(d))
+            await client.write_gatt_char(_BLE_COMMAND_UUID, _BLE_SENSOR_COMMAND)
+            data = await wait_for(future, _BLE_READ_TIMEOUT)
+            await client.stop_notify(_BLE_STATUS_UUID)
             return data
 
     @staticmethod
@@ -85,13 +89,13 @@ class VivosunThermoSensorCoordinator(DataUpdateCoordinator):
 
     @classmethod
     def _decode_raw_data(cls, data: bytearray) -> SensorData:
-        main_probe = cls._decode_probe_data(data, MAIN_TEMP_OFFSET, MAIN_HUMIDITY_OFFSET)
+        main_probe = cls._decode_probe_data(data, _MAIN_TEMP_OFFSET, _MAIN_HUMIDITY_OFFSET)
         external_probe_available = (
-            cls._decode_int16(data, EXTERNAL_TEMP_OFFSET) != VALUE_NONE
-            and cls._decode_int16(data, EXTERNAL_HUMIDITY_OFFSET) != VALUE_NONE
+            cls._decode_int16(data, _EXTERNAL_TEMP_OFFSET) != _VALUE_NONE
+            and cls._decode_int16(data, _EXTERNAL_HUMIDITY_OFFSET) != _VALUE_NONE
         )
         external_probe = (
-            cls._decode_probe_data(data, EXTERNAL_TEMP_OFFSET, EXTERNAL_HUMIDITY_OFFSET)
+            cls._decode_probe_data(data, _EXTERNAL_TEMP_OFFSET, _EXTERNAL_HUMIDITY_OFFSET)
             if external_probe_available
             else None
         )
