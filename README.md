@@ -22,14 +22,27 @@ mkdir -pv /config/custom_components
 cd /config/custom_components
 git clone https://github.com/sormy/vivosun-thermo-hass
 cp -rv vivosun-thermo-hass/src/custom_components/vivosun_thermo ./
-rm -rf vivosun-thermo-hass
 ```
 
-2. Then restart Home Assistant
+2. Then restart Home Assistant. For example, `ha core restart` for HASS OS.
 3. Navigate to Devices and Service
 4. Home Assistant supposed to prompt for installation.
 5. Enable pairing mode on device.
 6. Proceed with installation in Home Assistant prompt.
+
+## Updating
+
+For example, HASS OS recipe for copy/paste:
+
+```sh
+cd /config/custom_components
+cd vivosun-thermo-hass
+git pull
+cd -
+rm -rf vivosun_thermo
+cp -rv vivosun-thermo-hass/src/custom_components/vivosun_thermo ./
+ha core restart
+```
 
 ## License
 
