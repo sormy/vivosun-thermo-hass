@@ -4,7 +4,7 @@ from typing import Final
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 from homeassistant.const import PERCENTAGE, UnitOfTemperature, EntityCategory
 
-ATTR_ADDRESS: Final = "address"
+ATTR_DISCOVERY_INFO: Final = "discovery_info"
 
 DOMAIN: Final = "vivosun_thermo"
 

@@ -5,7 +5,7 @@ from homeassistant.components.bluetooth import BluetoothServiceInfoBleak
 from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
 from homeassistant.const import ATTR_NAME
 
-from .const import ATTR_ADDRESS, DEVICE_TYPES, DOMAIN
+from .const import ATTR_DISCOVERY_INFO, DEVICE_TYPES, DOMAIN
 
 _LOGGER = getLogger(__name__)
 
@@ -14,8 +14,8 @@ class VivosunThermoConfigFlow(ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
     def __init__(self):
-        self.device_address: str
-        self.device_name: str
+        self.name: str
+        self.discovery_info: BluetoothServiceInfoBleak
 
     async def async_step_bluetooth(
         self, discovery_info: BluetoothServiceInfoBleak
@@ -27,9 +27,7 @@ class VivosunThermoConfigFlow(ConfigFlow, domain=DOMAIN):
         self._abort_if_unique_id_configured()
 
         # Store discovery info for later use
-        orig_device_name = discovery_info.name
-        self.device_address = discovery_info.address
-        self.device_name = DEVICE_TYPES.get(orig_device_name, {}).get("name", orig_device_name)
+        self.name = DEVICE_TYPES.get(discovery_info.name, {}).get("name", discovery_info.name)
 
         # Ask the user whether to set up the device
         return self.async_show_confirm()
@@ -39,7 +37,7 @@ class VivosunThermoConfigFlow(ConfigFlow, domain=DOMAIN):
         return self.async_abort(reason="not_supported")
 
     async def async_step_confirm(self, user_input=None) -> ConfigFlowResult:
-        _LOGGER.debug(f"Confirming setup {self.device_name} with user input {user_input}")
+        _LOGGER.debug(f"Confirming setup {self.name} with user input {user_input}")
 
         # Redisplay the form if the user hasn't confirmed yet
         if user_input is None:
@@ -47,16 +45,16 @@ class VivosunThermoConfigFlow(ConfigFlow, domain=DOMAIN):
 
         # Create the config entry using user-provided name
         return self.async_create_entry(
-            title=self.device_name,
+            title=self.name,
             data={
                 ATTR_NAME: user_input[ATTR_NAME],
-                ATTR_ADDRESS: self.device_address,
+                ATTR_DISCOVERY_INFO: self.discovery_info,
             },
         )
 
     def async_show_confirm(self) -> ConfigFlowResult:
         return self.async_show_form(
             step_id="confirm",
-            description_placeholders={ATTR_NAME: self.device_name},
-            data_schema=vol.Schema({vol.Optional(ATTR_NAME, default=self.device_name): str}),
+            description_placeholders={ATTR_NAME: self.name},
+            data_schema=vol.Schema({vol.Optional(ATTR_NAME, default=self.name): str}),
         )
