@@ -4,7 +4,7 @@
         "step": {
             "confirm": {
                 "title": "Device Setup",
-                "description": "Do you want to set up the device: {name}? You can also enter a custom name in the field below if device with this name already exists."
+                "description": "Please provide a name for the new device to be added:"
             }
         },
         "abort": {

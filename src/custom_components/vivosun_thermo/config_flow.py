@@ -62,6 +62,5 @@ class VivosunThermoConfigFlow(ConfigFlow, domain=DOMAIN):
     def async_show_confirm(self) -> ConfigFlowResult:
         return self.async_show_form(
             step_id="confirm",
-            description_placeholders={ATTR_NAME: self.name},
             data_schema=vol.Schema({vol.Optional(ATTR_NAME, default=self.name): str}),
         )
