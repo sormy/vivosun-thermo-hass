@@ -5,7 +5,7 @@ from homeassistant.components.bluetooth import BluetoothServiceInfoBleak
 from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
 from homeassistant.const import ATTR_NAME
 
-from .const import ATTR_DISCOVERY_INFO, DEVICE_TYPES, DOMAIN
+from .const import DEVICE_TYPES, DOMAIN, ConfigEntryData
 
 _LOGGER = getLogger(__name__)
 
@@ -15,7 +15,8 @@ class VivosunThermoConfigFlow(ConfigFlow, domain=DOMAIN):
 
     def __init__(self):
         self.name: str
-        self.discovery_info: BluetoothServiceInfoBleak
+        self.discovery_name: str
+        self.discovery_address: str
 
     async def async_step_bluetooth(
         self, discovery_info: BluetoothServiceInfoBleak
@@ -23,12 +24,16 @@ class VivosunThermoConfigFlow(ConfigFlow, domain=DOMAIN):
         _LOGGER.debug(f"Discovered {discovery_info.name} with address {discovery_info.address}")
 
         # Ensure unique configuration
-        await self.async_set_unique_id(discovery_info.address)
+        await self.async_set_unique_id(f"{discovery_info.name}-{discovery_info.address}")
         self._abort_if_unique_id_configured()
 
         # Store discovery info for later use
-        self.discovery_info = discovery_info
+        self.discovery_name = discovery_info.name
+        self.discovery_address = discovery_info.address
         self.name = DEVICE_TYPES.get(discovery_info.name, {}).get("name", discovery_info.name)
+
+        # Fancy name for initial setup prompt
+        self.context["title_placeholders"] = {ATTR_NAME: self.name}
 
         # Ask the user whether to set up the device
         return self.async_show_confirm()
@@ -47,10 +52,11 @@ class VivosunThermoConfigFlow(ConfigFlow, domain=DOMAIN):
         # Create the config entry using user-provided name
         return self.async_create_entry(
             title=self.name,
-            data={
-                ATTR_NAME: user_input[ATTR_NAME],
-                ATTR_DISCOVERY_INFO: self.discovery_info,
-            },
+            data=ConfigEntryData(
+                name=self.name,
+                discovery_name=self.discovery_name,
+                discovery_address=self.discovery_address,
+            ),
         )
 
     def async_show_confirm(self) -> ConfigFlowResult:

@@ -1,15 +1,15 @@
+from typing import cast
+
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform, ATTR_NAME
+from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 
-from .const import ATTR_DISCOVERY_INFO, DOMAIN
+from .const import DOMAIN, ConfigEntryData
 from .coordinator import VivosunThermoSensorCoordinator
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    coordinator = VivosunThermoSensorCoordinator(
-        hass, entry.data[ATTR_NAME], entry.data[ATTR_DISCOVERY_INFO]
-    )
+    coordinator = VivosunThermoSensorCoordinator(hass, cast(ConfigEntryData, entry.data))
     await coordinator.async_config_entry_first_refresh()
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
     await hass.config_entries.async_forward_entry_setups(entry, [Platform.SENSOR])

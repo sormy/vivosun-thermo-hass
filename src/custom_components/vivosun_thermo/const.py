@@ -1,10 +1,8 @@
 from datetime import timedelta
-from typing import Final
+from typing import Final, TypedDict
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 from homeassistant.const import PERCENTAGE, UnitOfTemperature, EntityCategory
-
-ATTR_DISCOVERY_INFO: Final = "discovery_info"
 
 DOMAIN: Final = "vivosun_thermo"
 
@@ -18,14 +16,7 @@ DEVICE_TYPES: Final = {
 
 DEFAULT_SCAN_INTERVAL: Final = timedelta(seconds=60)
 
-PROBE_TYPE_MAIN = "main"
-PROBE_TYPE_EXTERNAL = "external"
-
 PROBE_TYPES = ["main", "external"]
-
-SENSOR_TYPE_TEMPERATURE = "temperature_c"
-SENSOR_TYPE_HUMIDITY = "humidity"
-SENSOR_TYPE_VPD = "vpd"
 
 SENSOR_TYPES = {
     "temperature_c": {
@@ -56,3 +47,9 @@ SENSOR_TYPES = {
         "precision": 2,  # 0.01
     },
 }
+
+
+class ConfigEntryData(TypedDict):
+    name: str
+    discovery_name: str
+    discovery_address: str

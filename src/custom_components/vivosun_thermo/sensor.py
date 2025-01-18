@@ -43,9 +43,9 @@ class VivosunThermoSensor(CoordinatorEntity, SensorEntity):
         self.sensor_type: str = sensor_type
 
         sensor_info = SENSOR_TYPES[sensor_type]
-        device_info = DEVICE_TYPES.get(coordinator.discovery_info.name, {})
+        device_info = DEVICE_TYPES.get(coordinator.discovery_name, {})
 
-        device_name = device_info.get("name", coordinator.discovery_info.name)
+        device_name = device_info.get("name", coordinator.discovery_name)
         device_manufacturer = device_info.get("manufacturer")
         device_model = device_info.get("model")
 
@@ -56,10 +56,10 @@ class VivosunThermoSensor(CoordinatorEntity, SensorEntity):
         self._attr_entity_category = sensor_info["entity_category"]
         self._attr_native_unit_of_measurement = sensor_info["native_unit_of_measurement"]
         self._attr_suggested_display_precision = sensor_info["precision"]
-        self._attr_unique_id = f"{coordinator.discovery_info.name}-{coordinator.discovery_info.address}-{probe_type}-{sensor_type}"
+        self._attr_unique_id = f"{coordinator.discovery_name}-{coordinator.discovery_address}-{probe_type}-{sensor_type}"
         self._attr_should_poll = False
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, coordinator.discovery_info.address)},
+            identifiers={(DOMAIN, coordinator.discovery_address)},
             name=device_name,
             manufacturer=device_manufacturer,
             model=device_model,
