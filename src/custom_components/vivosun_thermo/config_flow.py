@@ -39,7 +39,7 @@ class VivosunThermoConfigFlow(ConfigFlow, domain=DOMAIN):
         return self.async_abort(reason="Manual configuration is not supported")
 
     async def async_step_confirm(self, user_input=None) -> ConfigFlowResult:
-        _LOGGER.debug(f"Confirming setup {self.device_name} with address {self.device_address}")
+        _LOGGER.debug(f"Confirming setup {self.device_name} with user input {user_input}")
 
         # Redisplay the form if the user hasn't confirmed yet
         if user_input is None:
@@ -56,7 +56,6 @@ class VivosunThermoConfigFlow(ConfigFlow, domain=DOMAIN):
 
     def async_show_confirm(self) -> ConfigFlowResult:
         return self.async_show_form(
-            step_id="confirm",
             description_placeholders={ATTR_NAME: self.device_name},
-            data_schema=vol.Schema({vol.Required(ATTR_NAME, default=self.device_name): str}),
+            data_schema=vol.Schema({vol.Optional(ATTR_NAME, default=self.device_name): str}),
         )
