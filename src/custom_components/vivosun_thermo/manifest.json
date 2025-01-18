@@ -1,0 +1,9 @@
+{
+    "domain": "vivosun_thermo",
+    "name": "Vivosun Thermo",
+    "version": "1.0.0",
+    "documentation": "https://github.com/sormy/vivosun-thermo-hass",
+    "dependencies": [],
+    "codeowners": ["@sormy"],
+    "requirements": ["bleak>=0.22.3"]
+}

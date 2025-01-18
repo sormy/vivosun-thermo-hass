@@ -1,0 +1,11 @@
+bleak~=0.22.3
+homeassistant~=2025.1.2
+
+black~=24.10.0
+flake8~=7.1.1
+Flake8-pyproject~=1.2.3
+isort~=5.13.2
+pyright~=1.1.391
+pytest~=8.3.4
+pytest-asyncio~=0.25.1
+pytest-cov~=6.0.0

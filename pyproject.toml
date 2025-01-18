@@ -1,0 +1,54 @@
+# pyproject.toml
+
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools>=61.0.0", "wheel"]
+
+[project]
+authors = [{ name = "Artem Butusov", email = "art.sormy@gmail.com" }]
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+]
+description = "Home Assistant component for Bluetooth VIVOSUN Thermo devices"
+dynamic = ["dependencies"]
+keywords = [
+    "VIVOSUN",
+    "AeroLab",
+    "Hygrometer",
+    "Thermometer",
+    "Thermo",
+    "VS-THB1S",
+    "HA",
+    "HASS",
+    "Home Automation",
+    "Home Assistant",
+]
+license = { file = "LICENSE" }
+name = "vivosun-thermo-hass"
+readme = "README.md"
+requires-python = ">=3.10"
+version = "1.0.0"
+
+[tool.setuptools.dynamic]
+dependencies = { file = ["requirements.txt"] }
+
+[project.urls]
+Homepage = "https://github.com/sormy/vivosun-thermo-hass"
+Issues = "https://github.com/sormy/vivosun-thermo-hass/issues"
+
+[tool.black]
+line-length = 100
+
+[tool.isort]
+profile = "black"
+line_length = 100
+
+[tool.flake8]
+max-line-length = 100
+extend-ignore = ["E203", "E501"]
+
+[tool.pytest.ini_options]
+addopts = "--cov=vivosun_thermo_hass --cov-report html:coverage -s -v"
+asyncio_default_fixture_loop_scope = "function"
