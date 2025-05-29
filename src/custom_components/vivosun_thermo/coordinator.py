@@ -76,7 +76,12 @@ class VivosunThermoSensorCoordinator(DataUpdateCoordinator):
 
     @staticmethod
     def _calculate_vpd(temp_c: float, humidity: float):
-        return (610.78 * (10 ** ((7.5 * temp_c) / (237.3 + temp_c))) * humidity / 100) / 1000
+        # Calculate saturation vapor pressure (in kPa)
+        svp = 0.61078 * 10 ** ((7.5 * temp_c) / (237.3 + temp_c))
+        # Calculate actual vapor pressure (in kPa)
+        avp = svp * (humidity / 100.0)
+        # VPD is the difference
+        return svp - avp
 
     @classmethod
     def _decode_probe_data(
