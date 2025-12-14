@@ -49,11 +49,14 @@ class VivosunThermoConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is None:
             return self.async_show_confirm()
 
+        # Use custom name if provided, otherwise use default
+        name = user_input.get(ATTR_NAME, self.name)
+
         # Create the config entry using user-provided name
         return self.async_create_entry(
-            title=self.name,
+            title=name,
             data=ConfigEntryData(
-                name=self.name,
+                name=name,
                 discovery_name=self.discovery_name,
                 discovery_address=self.discovery_address,
             ),
