@@ -10,6 +10,5 @@
     "bluetooth": [{ "local_name": "ThermoBeacon2" }],
     "iot_class": "local_polling",
     "integration_type": "device",
-    "config_flow": true,
-    "single_config_entry": true
+    "config_flow": true
 }
