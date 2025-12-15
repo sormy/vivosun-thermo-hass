@@ -4,7 +4,6 @@ from struct import unpack_from
 from typing import Any, Final, TypedDict, cast
 
 from bleak import BleakClient
-
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 

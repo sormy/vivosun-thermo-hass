@@ -2,7 +2,7 @@ from datetime import timedelta
 from typing import Final, TypedDict
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
-from homeassistant.const import PERCENTAGE, UnitOfTemperature, EntityCategory
+from homeassistant.const import PERCENTAGE, EntityCategory, UnitOfTemperature
 
 DOMAIN: Final = "vivosun_thermo"
 

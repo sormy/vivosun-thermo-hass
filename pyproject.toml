@@ -28,8 +28,8 @@ keywords = [
 license = { file = "LICENSE" }
 name = "vivosun-thermo-hass"
 readme = "README.md"
-requires-python = ">=3.10"
-version = "1.0.0"
+requires-python = ">=3.13"
+version = "1.0.1"
 
 [tool.setuptools.dynamic]
 dependencies = { file = ["requirements.txt"] }
@@ -50,5 +50,16 @@ max-line-length = 100
 extend-ignore = ["E203", "E501"]
 
 [tool.pytest.ini_options]
-addopts = "--cov=vivosun_thermo_hass --cov-report html:coverage -s -v"
+pythonpath = ["src"]
+addopts = "-v"
+asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
+pythonVersion = "3.13"
+include = ["src"]
+exclude = ["**/__pycache__", ".venv", "tests"]
+typeCheckingMode = "basic"

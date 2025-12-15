@@ -1,2 +1,4 @@
-bleak~=0.22.3
-homeassistant~=2025.1.2
+# same as here: https://raw.githubusercontent.com/home-assistant/core/2025.12.3/requirements_all.txt
+bleak~=1.0.1
+voluptuous~=0.15.2
+homeassistant~=2025.12.3
