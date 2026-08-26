@@ -3,6 +3,7 @@ from logging import getLogger
 from struct import unpack_from
 from typing import Any, Final, TypedDict, cast
 
+from bleak.backends.device import BLEDevice
 from bleak_retry_connector import BleakClientWithServiceCache, establish_connection
 from homeassistant.components import bluetooth
 from homeassistant.core import HomeAssistant
@@ -69,7 +70,7 @@ class VivosunThermoSensorCoordinator(DataUpdateCoordinator):
         return cast(dict, self._decode_raw_data(data))
 
     @staticmethod
-    async def _read_raw_data(ble_device: bluetooth.BLEDevice) -> bytearray:
+    async def _read_raw_data(ble_device: BLEDevice) -> bytearray:
         client = await establish_connection(
             BleakClientWithServiceCache,
             ble_device,
