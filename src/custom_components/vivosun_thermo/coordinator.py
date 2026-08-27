@@ -2,7 +2,7 @@ from asyncio import Future, timeout, wait_for
 from contextlib import suppress
 from logging import getLogger
 from struct import unpack_from
-from typing import Any, Final, TypedDict, cast
+from typing import Final, TypedDict, cast
 
 from bleak.backends.device import BLEDevice
 from bleak.exc import BleakError
@@ -44,7 +44,7 @@ class SensorData(TypedDict):
     external: ProbeData | None
 
 
-class VivosunThermoSensorCoordinator(DataUpdateCoordinator):
+class VivosunThermoSensorCoordinator(DataUpdateCoordinator[SensorData]):
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry):
         data = cast(ConfigEntryData, entry.data)
         super().__init__(
@@ -58,7 +58,7 @@ class VivosunThermoSensorCoordinator(DataUpdateCoordinator):
         self.discovery_name = data["discovery_name"]
         self.discovery_address = data["discovery_address"]
 
-    async def _read_sensor_data(self) -> dict[str, Any]:
+    async def _read_sensor_data(self) -> SensorData:
         client = await self._connect()
         try:
             data = await self._read_raw_data(client)
@@ -68,7 +68,7 @@ class VivosunThermoSensorCoordinator(DataUpdateCoordinator):
             # Teardown must never discard a good reading or mask the failure that caused it.
             with suppress(Exception):
                 await client.disconnect()
-        return cast(dict, self._decode_raw_data(data))
+        return self._decode_raw_data(data)
 
     def _resolve_device(self) -> BLEDevice:
         device = bluetooth.async_ble_device_from_address(

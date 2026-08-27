@@ -11,7 +11,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import VivosunThermoConfigEntry
 from .const import DEVICE_TYPES, DOMAIN, PROBE_TYPES, SENSOR_TYPES
-from .coordinator import VivosunThermoSensorCoordinator
+from .coordinator import ProbeData, VivosunThermoSensorCoordinator
 
 
 async def async_setup_entry(
@@ -29,7 +29,7 @@ async def async_setup_entry(
     )
 
 
-class VivosunThermoSensor(CoordinatorEntity, SensorEntity):
+class VivosunThermoSensor(CoordinatorEntity[VivosunThermoSensorCoordinator], SensorEntity):
     _attr_should_poll = False
 
     def __init__(
@@ -58,13 +58,16 @@ class VivosunThermoSensor(CoordinatorEntity, SensorEntity):
             model=device_info.get("model"),
         )
 
+    def _probe_data(self) -> ProbeData | None:
+        return self.coordinator.data.get(self.probe_type)
+
     @property
     @override
     def native_value(self) -> StateType | date | datetime | Decimal:  # type: ignore
-        probe_data = self.coordinator.data.get(self.probe_type, {})
-        return probe_data.get(self.sensor_type)
+        probe_data = self._probe_data()
+        return probe_data[self.sensor_type] if probe_data else None
 
     @property
     @override
     def available(self) -> bool:  # type: ignore
-        return super().available and self.coordinator.data.get(self.probe_type) is not None
+        return super().available and self._probe_data() is not None

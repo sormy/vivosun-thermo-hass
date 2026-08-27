@@ -3,9 +3,12 @@
 import sys
 import types
 from pathlib import Path
+from typing import Generic, TypeVar
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
+
+_DataT = TypeVar("_DataT")
 
 # Mock pycares for python 3.13 (works fine as is on 3.14)
 pycares = types.ModuleType("pycares")
@@ -21,7 +24,7 @@ sys.modules["pycares"] = pycares
 
 
 # Mock DataUpdateCoordinator to avoid event loop issues
-class MockDataUpdateCoordinator:
+class MockDataUpdateCoordinator(Generic[_DataT]):
     """Mock DataUpdateCoordinator that doesn't require event loop."""
 
     def __init__(self, hass, logger, *, name, config_entry, update_interval, update_method):
@@ -69,6 +72,7 @@ update_coordinator_mock.CoordinatorEntity = type(
     {
         "__init__": lambda self, coordinator: setattr(self, "coordinator", coordinator),
         "available": property(lambda self: self.coordinator.last_update_success),
+        "__class_getitem__": classmethod(lambda cls, item: cls),
     },
 )
 sys.modules["homeassistant.helpers.update_coordinator"] = update_coordinator_mock
