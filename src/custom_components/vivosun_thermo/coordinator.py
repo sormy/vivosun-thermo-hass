@@ -103,7 +103,7 @@ class VivosunThermoSensorCoordinator(DataUpdateCoordinator[SensorData]):
 
     @staticmethod
     async def _read_raw_data(client: BleakClientWithServiceCache) -> bytearray:
-        future = Future()
+        future: Future[bytearray] = Future()
         await client.start_notify(_BLE_STATUS_UUID, lambda _, d: future.set_result(d))
         await client.write_gatt_char(_BLE_COMMAND_UUID, _BLE_SENSOR_COMMAND)
         data = await wait_for(future, _BLE_READ_TIMEOUT)

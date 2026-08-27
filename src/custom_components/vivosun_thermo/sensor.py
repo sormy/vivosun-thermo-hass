@@ -64,11 +64,11 @@ class VivosunThermoSensor(CoordinatorEntity[VivosunThermoSensorCoordinator], Sen
 
     @property
     @override
-    def native_value(self) -> StateType | date | datetime | Decimal:  # type: ignore
+    def native_value(self) -> StateType | date | datetime | Decimal:
         probe_data = self._probe_data()
-        return probe_data[self.sensor_type] if probe_data else None
+        return probe_data[self.sensor_type] if probe_data is not None else None
 
     @property
     @override
-    def available(self) -> bool:  # type: ignore
+    def available(self) -> bool:
         return super().available and self._probe_data() is not None
