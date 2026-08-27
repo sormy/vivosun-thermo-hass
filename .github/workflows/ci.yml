@@ -8,18 +8,21 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.13", "3.14"]
     steps:
       - uses: actions/checkout@v4
 
+      # Every interpreter tox's env_list names. The last one installed becomes
+      # the default python3, which is the one make setup builds .venv with.
       - uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: |
+            3.13
+            3.14
 
-      # The same targets a contributor runs locally, so CI cannot drift from them.
+      # The same targets a contributor runs locally, so CI cannot drift.
       - run: make setup
       - run: make lint
-      - run: make test
+
+      # tox.ini's env_list decides which interpreters are tested. Skipping a
+      # missing one would let an incomplete setup pass as a green build.
+      - run: .venv/bin/tox --skip-missing-interpreters false
