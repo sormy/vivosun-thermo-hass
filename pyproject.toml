@@ -29,7 +29,7 @@ license = { file = "LICENSE" }
 name = "vivosun-thermo-hass"
 readme = "README.md"
 requires-python = ">=3.13.2"
-version = "1.0.2"
+version = "1.0.3"
 
 # Home Assistant loads custom_components/ directly; name it so a flat layout does not
 # make setuptools guess (and sweep in tests/).

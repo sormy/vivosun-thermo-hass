@@ -14,8 +14,16 @@ VIVOSUN Thermo component for Home Assistant has these features:
 
 ### HACS
 
-Add `https://github.com/sormy/vivosun-thermo-hass` as a custom repository of type
-`Integration`, then download **VIVOSUN Thermo** and restart Home Assistant.
+[![Open this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=sormy&repository=vivosun-thermo-hass&category=integration)
+
+This repository is not in the HACS default store, so it is added as a custom
+repository. The badge above does steps 1 to 3 in one click.
+
+1. Open **HACS** in Home Assistant.
+2. From the three-dot menu, choose **Custom repositories**.
+3. Paste `https://github.com/sormy/vivosun-thermo-hass`, set the type to
+   **Integration**, and select **Add**.
+4. Find **VIVOSUN Thermo** in HACS, download it, and restart Home Assistant.
 
 ### Manual
 
