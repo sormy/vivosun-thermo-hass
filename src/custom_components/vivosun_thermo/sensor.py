@@ -3,21 +3,23 @@ from decimal import Decimal
 from typing import override
 
 from homeassistant.components.sensor import SensorEntity
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.typing import StateType
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from . import VivosunThermoConfigEntry
 from .const import DEVICE_TYPES, DOMAIN, PROBE_TYPES, SENSOR_TYPES
 from .coordinator import VivosunThermoSensorCoordinator
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
+    hass: HomeAssistant,
+    entry: VivosunThermoConfigEntry,
+    async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
-    coordinator: VivosunThermoSensorCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
 
     entities = [
         VivosunThermoSensor(coordinator, probe_type, sensor_type, entry)
@@ -35,7 +37,7 @@ class VivosunThermoSensor(CoordinatorEntity, SensorEntity):
         coordinator: VivosunThermoSensorCoordinator,
         probe_type: str,
         sensor_type: str,
-        entry: ConfigEntry,
+        entry: VivosunThermoConfigEntry,
     ) -> None:
         super().__init__(coordinator)
 

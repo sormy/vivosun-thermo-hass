@@ -178,7 +178,7 @@ class TestVivosunThermoSensor:
             "external": {"temperature_c": 18.0, "humidity": 70.0, "vpd": 0.62},
         }
 
-        hass.data.setdefault(DOMAIN, {})[mock_config_entry.entry_id] = coordinator
+        mock_config_entry.runtime_data = coordinator
 
         entities = []
 
@@ -208,7 +208,7 @@ class TestVivosunThermoSensor:
             # external probe not connected
         }
 
-        hass.data.setdefault(DOMAIN, {})[mock_config_entry.entry_id] = coordinator
+        mock_config_entry.runtime_data = coordinator
 
         entities = []
 
