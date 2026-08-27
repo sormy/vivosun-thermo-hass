@@ -1,7 +1,7 @@
 {
     "domain": "vivosun_thermo",
     "name": "VIVOSUN Thermo",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "documentation": "https://github.com/sormy/vivosun-thermo-hass",
     "issue_tracker": "https://github.com/sormy/vivosun-thermo-hass/issues",
     "dependencies": ["bluetooth"],
