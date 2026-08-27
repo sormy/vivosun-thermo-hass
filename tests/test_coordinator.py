@@ -134,6 +134,21 @@ class TestVivosunThermoSensorCoordinator:
         mock_bleak_client.write_gatt_char.assert_called_once()
         mock_bleak_client.stop_notify.assert_called_once()
 
+    async def test_read_raw_data_ignores_extra_notifications(
+        self, mock_bleak_client, valid_sensor_data_both_probes
+    ):
+        """A chatty device must not raise InvalidStateError out of the notify callback."""
+
+        async def mock_notify(uuid, callback):
+            callback(None, valid_sensor_data_both_probes)
+            callback(None, bytearray(11))
+
+        mock_bleak_client.start_notify = AsyncMock(side_effect=mock_notify)
+
+        data = await VivosunThermoSensorCoordinator._read_raw_data(mock_bleak_client)
+
+        assert data == valid_sensor_data_both_probes
+
     async def test_read_raw_data_timeout(self, mock_bleak_client):
         """Test timeout when reading from BLE device."""
 
