@@ -19,17 +19,21 @@ Add `https://github.com/sormy/vivosun-thermo-hass` as a custom repository of typ
 
 ### Manual
 
-Below `/config` is the Home Assistant `config` directory:
+`/config` is the Home Assistant configuration directory. The clone goes to a
+temporary directory and is deleted afterwards, so the only thing left under
+`custom_components` is the integration itself.
 
 ```sh
-cd /config
-mkdir -pv /config/custom_components
-cd /config/custom_components
-git clone https://github.com/sormy/vivosun-thermo-hass
-cp -rv vivosun-thermo-hass/custom_components/vivosun_thermo ./
+git clone --depth 1 https://github.com/sormy/vivosun-thermo-hass /tmp/vivosun-thermo-hass
+mkdir -p /config/custom_components
+rm -rf /config/custom_components/vivosun_thermo
+cp -r /tmp/vivosun-thermo-hass/custom_components/vivosun_thermo /config/custom_components/
+rm -rf /tmp/vivosun-thermo-hass
+ha core restart
 ```
 
-Then restart Home Assistant, for example `ha core restart` on HASS OS.
+Append `--branch <version>` to the clone to install a specific release rather
+than the default branch.
 
 ### Adding the device
 
@@ -39,17 +43,8 @@ Then restart Home Assistant, for example `ha core restart` on HASS OS.
 
 ## Updating
 
-HACS offers the update itself. For a manual install, on HASS OS:
-
-```sh
-cd /config/custom_components
-cd vivosun-thermo-hass
-git pull
-cd -
-rm -rf vivosun_thermo
-cp -rv vivosun-thermo-hass/custom_components/vivosun_thermo ./
-ha core restart
-```
+HACS offers the update itself. A manual install updates by running the command
+above again — it replaces the integration in place.
 
 ## Development
 
