@@ -52,9 +52,15 @@ sys.modules["serial.tools.list_ports_common"] = Mock()
 sys.modules["aiousbwatcher"] = Mock()
 sys.modules["usb_devices"] = Mock()
 
+
+class MockUpdateFailed(Exception):
+    """Mock UpdateFailed, raisable unlike an auto-generated Mock attribute."""
+
+
 # Mock HA helpers modules
 update_coordinator_mock = Mock()
 update_coordinator_mock.DataUpdateCoordinator = MockDataUpdateCoordinator
+update_coordinator_mock.UpdateFailed = MockUpdateFailed
 update_coordinator_mock.CoordinatorEntity = type(
     "CoordinatorEntity",
     (),
@@ -92,15 +98,23 @@ from custom_components.vivosun_thermo.const import ConfigEntryData  # noqa: E402
 
 @pytest.fixture
 def mock_bleak_client():
-    """Mock BleakClient."""
-    with patch("custom_components.vivosun_thermo.coordinator.BleakClient") as mock:
-        client = MagicMock()
-        client.__aenter__ = AsyncMock(return_value=client)
-        client.__aexit__ = AsyncMock(return_value=None)
-        client.start_notify = AsyncMock()
-        client.stop_notify = AsyncMock()
-        client.write_gatt_char = AsyncMock()
-        mock.return_value = client
+    """Mock a connected BLE client, wired into the coordinator's connect path."""
+    client = MagicMock()
+    client.start_notify = AsyncMock()
+    client.stop_notify = AsyncMock()
+    client.write_gatt_char = AsyncMock()
+    client.disconnect = AsyncMock()
+    with (
+        patch(
+            "custom_components.vivosun_thermo.coordinator.establish_connection",
+            AsyncMock(return_value=client),
+        ),
+        patch(
+            "custom_components.vivosun_thermo.coordinator.bluetooth."
+            "async_ble_device_from_address",
+            return_value=MagicMock(),
+        ),
+    ):
         yield client
 
 

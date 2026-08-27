@@ -1,9 +1,10 @@
-from asyncio import Future, wait_for
+from asyncio import Future, timeout, wait_for
 from logging import getLogger
 from struct import unpack_from
 from typing import Any, Final, TypedDict, cast
 
 from bleak.backends.device import BLEDevice
+from bleak.exc import BleakError
 from bleak_retry_connector import BleakClientWithServiceCache, establish_connection
 from homeassistant.components import bluetooth
 from homeassistant.core import HomeAssistant
@@ -20,7 +21,7 @@ _BLE_STATUS_UUID: Final = "0000fff3-0000-1000-8000-00805f9b34fb"
 
 _BLE_READ_TIMEOUT: Final = 1
 _BLE_CONNECT_TIMEOUT: Final = 30
-_BLE_CONNECT_MAX_ATTEMPTS: Final = 3
+_BLE_CONNECT_ATTEMPTS: Final = 3
 
 _MAIN_TEMP_OFFSET: Final = 1
 _MAIN_HUMIDITY_OFFSET: Final = 3
@@ -50,43 +51,51 @@ class VivosunThermoSensorCoordinator(DataUpdateCoordinator):
             update_interval=DEFAULT_SCAN_INTERVAL,
             update_method=self._read_sensor_data,
         )
-        self.hass = hass
         self.discovery_name = data["discovery_name"]
         self.discovery_address = data["discovery_address"]
 
     async def _read_sensor_data(self) -> dict[str, Any]:
-        # Resolve a fresh, routable BLEDevice each poll instead of holding a
-        # single long-lived BleakClient built from a bare address string.
-        # This lets HA pick whichever adapter/proxy can currently reach the
-        # device, instead of always trying the same (possibly stale) route.
-        ble_device = bluetooth.async_ble_device_from_address(
-            self.hass, self.discovery_address, connectable=True
-        )
-        if ble_device is None:
-            raise UpdateFailed(
-                f"Could not find VIVOSUN device with address {self.discovery_address}"
-            )
-        data = await self._read_raw_data(ble_device)
-        return cast(dict, self._decode_raw_data(data))
-
-    @staticmethod
-    async def _read_raw_data(ble_device: BLEDevice) -> bytearray:
-        client = await establish_connection(
-            BleakClientWithServiceCache,
-            ble_device,
-            ble_device.name or ble_device.address,
-            max_attempts=_BLE_CONNECT_MAX_ATTEMPTS,
-            timeout=_BLE_CONNECT_TIMEOUT,
-        )
+        client = await self._connect()
         try:
-            future = Future()
-            await client.start_notify(_BLE_STATUS_UUID, lambda _, d: future.set_result(d))
-            await client.write_gatt_char(_BLE_COMMAND_UUID, _BLE_SENSOR_COMMAND)
-            data = await wait_for(future, _BLE_READ_TIMEOUT)
-            await client.stop_notify(_BLE_STATUS_UUID)
-            return data
+            data = await self._read_raw_data(client)
+        except BleakError as err:
+            raise UpdateFailed(f"Failed to read {self.discovery_address}: {err}") from err
         finally:
             await client.disconnect()
+        return cast(dict, self._decode_raw_data(data))
+
+    def _resolve_device(self) -> BLEDevice:
+        device = bluetooth.async_ble_device_from_address(
+            self.hass, self.discovery_address, connectable=True
+        )
+        if device is None:
+            raise UpdateFailed(f"Device {self.discovery_address} is not in range")
+        return device
+
+    async def _connect(self) -> BleakClientWithServiceCache:
+        # Resolve the device every poll so Home Assistant routes through whichever adapter or
+        # ESPHome proxy currently sees it. establish_connection ignores a timeout kwarg (it forces
+        # its own on connect), so the caller-visible bound has to be applied out here.
+        device = self._resolve_device()
+        try:
+            async with timeout(_BLE_CONNECT_TIMEOUT):
+                return await establish_connection(
+                    BleakClientWithServiceCache,
+                    device,
+                    self.discovery_name,
+                    max_attempts=_BLE_CONNECT_ATTEMPTS,
+                )
+        except (BleakError, TimeoutError) as err:
+            raise UpdateFailed(f"Failed to connect to {self.discovery_address}: {err}") from err
+
+    @staticmethod
+    async def _read_raw_data(client: BleakClientWithServiceCache) -> bytearray:
+        future = Future()
+        await client.start_notify(_BLE_STATUS_UUID, lambda _, d: future.set_result(d))
+        await client.write_gatt_char(_BLE_COMMAND_UUID, _BLE_SENSOR_COMMAND)
+        data = await wait_for(future, _BLE_READ_TIMEOUT)
+        await client.stop_notify(_BLE_STATUS_UUID)
+        return data
 
     @staticmethod
     def _decode_int16(data: bytearray, offset: int) -> int:

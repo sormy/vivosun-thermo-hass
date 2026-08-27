@@ -1,9 +1,11 @@
 """Tests for vivosun_thermo coordinator."""
 
 from asyncio import TimeoutError as AsyncTimeoutError
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from bleak.exc import BleakError
+from homeassistant.helpers.update_coordinator import UpdateFailed
 
 from custom_components.vivosun_thermo.coordinator import VivosunThermoSensorCoordinator
 
@@ -161,6 +163,71 @@ class TestVivosunThermoSensorCoordinator:
         assert data["main"]["humidity"] == 65.0
         assert data["external"]["temperature_c"] == 18.0
         assert data["external"]["humidity"] == 70.0
+
+    @pytest.mark.parametrize(
+        "failure",
+        [BleakError("boom"), TimeoutError()],
+        ids=["bleak_error", "timeout"],
+    )
+    async def test_read_sensor_data_connect_failure(self, hass, config_entry_data, failure):
+        """Connect failures surface as UpdateFailed, not raw bleak errors."""
+        coordinator = VivosunThermoSensorCoordinator(hass, config_entry_data)
+
+        with (
+            patch(
+                "custom_components.vivosun_thermo.coordinator.bluetooth."
+                "async_ble_device_from_address",
+                return_value=MagicMock(),
+            ),
+            patch(
+                "custom_components.vivosun_thermo.coordinator.establish_connection",
+                AsyncMock(side_effect=failure),
+            ),
+            pytest.raises(UpdateFailed),
+        ):
+            await coordinator._read_sensor_data()
+
+    async def test_read_sensor_data_device_out_of_range(self, hass, config_entry_data):
+        """A device HA cannot currently see surfaces as UpdateFailed."""
+        coordinator = VivosunThermoSensorCoordinator(hass, config_entry_data)
+
+        with (
+            patch(
+                "custom_components.vivosun_thermo.coordinator.bluetooth."
+                "async_ble_device_from_address",
+                return_value=None,
+            ),
+            pytest.raises(UpdateFailed),
+        ):
+            await coordinator._read_sensor_data()
+
+    async def test_read_sensor_data_disconnects_after_read(
+        self, hass, config_entry_data, mock_bleak_client, valid_sensor_data_both_probes
+    ):
+        """The connection is always released, so the device stays reachable to other clients."""
+
+        async def mock_notify(uuid, callback):
+            callback(None, valid_sensor_data_both_probes)
+
+        mock_bleak_client.start_notify = AsyncMock(side_effect=mock_notify)
+
+        coordinator = VivosunThermoSensorCoordinator(hass, config_entry_data)
+        await coordinator._read_sensor_data()
+
+        mock_bleak_client.disconnect.assert_awaited_once()
+
+    async def test_read_sensor_data_disconnects_after_read_failure(
+        self, hass, config_entry_data, mock_bleak_client
+    ):
+        """A failed read still releases the connection rather than leaking it."""
+        mock_bleak_client.start_notify = AsyncMock(side_effect=BleakError("boom"))
+
+        coordinator = VivosunThermoSensorCoordinator(hass, config_entry_data)
+
+        with pytest.raises(UpdateFailed):
+            await coordinator._read_sensor_data()
+
+        mock_bleak_client.disconnect.assert_awaited_once()
 
     async def test_coordinator_initialization(self, hass, config_entry_data):
         """Test coordinator initialization."""
