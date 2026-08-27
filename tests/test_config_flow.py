@@ -1,7 +1,8 @@
 """Tests for vivosun_thermo config flow."""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
 from homeassistant.components.bluetooth import BluetoothServiceInfoBleak
 from homeassistant.const import ATTR_NAME
 
@@ -241,3 +242,31 @@ class TestVivosunThermoConfigFlow:
         # Verify different unique IDs
         mock_set_id1.assert_called_once_with("ThermoBeacon2-AA:BB:CC:DD:EE:01")
         mock_set_id2.assert_called_once_with("ThermoBeacon2-AA:BB:CC:DD:EE:02")
+
+    @pytest.mark.parametrize(
+        ("submitted", "expected"),
+        [
+            ("Tent A", "Tent A"),
+            ("", "VIVOSUN AeroLab THB1S"),
+            ("   ", "VIVOSUN AeroLab THB1S"),
+            ("  Tent A  ", "Tent A"),
+        ],
+        ids=["custom", "cleared", "whitespace", "padded"],
+    )
+    async def test_confirm_falls_back_when_name_is_blank(
+        self, mock_discovery_info, submitted, expected
+    ):
+        """Clearing the name field keeps the default rather than naming the device nothing."""
+        flow = VivosunThermoConfigFlow()
+        flow.hass = MagicMock()
+        flow.context = {}
+        flow.async_set_unique_id = AsyncMock()
+        flow._abort_if_unique_id_configured = MagicMock()
+
+        await flow.async_step_bluetooth(mock_discovery_info)
+        flow.async_create_entry = MagicMock(side_effect=lambda **kw: kw)
+
+        result = await flow.async_step_confirm({ATTR_NAME: submitted})
+
+        assert result["title"] == expected
+        assert result["data"]["name"] == expected

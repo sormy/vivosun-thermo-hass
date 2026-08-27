@@ -48,8 +48,8 @@ class VivosunThermoConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is None:
             return self.async_show_confirm()
 
-        # Use custom name if provided, otherwise use default
-        name = user_input.get(ATTR_NAME, self.name)
+        # A cleared or blank field means "keep the default", not "no name at all".
+        name = user_input.get(ATTR_NAME, "").strip() or self.name
 
         # Create the config entry using user-provided name
         return self.async_create_entry(
