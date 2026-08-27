@@ -13,15 +13,14 @@ _LOGGER = getLogger(__name__)
 class VivosunThermoConfigFlow(ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
-    def __init__(self):
-        self.name: str
-        self.discovery_name: str
-        self.discovery_address: str
+    name: str
+    discovery_name: str
+    discovery_address: str
 
     async def async_step_bluetooth(
         self, discovery_info: BluetoothServiceInfoBleak
     ) -> ConfigFlowResult:
-        _LOGGER.debug(f"Discovered {discovery_info.name} with address {discovery_info.address}")
+        _LOGGER.debug("Discovered %s with address %s", discovery_info.name, discovery_info.address)
 
         # Ensure unique configuration
         await self.async_set_unique_id(f"{discovery_info.name}-{discovery_info.address}")
@@ -43,7 +42,7 @@ class VivosunThermoConfigFlow(ConfigFlow, domain=DOMAIN):
         return self.async_abort(reason="not_supported")
 
     async def async_step_confirm(self, user_input=None) -> ConfigFlowResult:
-        _LOGGER.debug(f"Confirming setup {self.name} with user input {user_input}")
+        _LOGGER.debug("Confirming setup %s with user input %s", self.name, user_input)
 
         # Redisplay the form if the user hasn't confirmed yet
         if user_input is None:
