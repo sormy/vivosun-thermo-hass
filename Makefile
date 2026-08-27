@@ -1,4 +1,4 @@
-.PHONY: setup format lint test tox clean build all
+.PHONY: setup format lint test test-cov tox prepublish clean build all
 
 setup:
 	python3 -m venv .venv
@@ -24,6 +24,8 @@ test-cov:
 
 tox:
 	.venv/bin/tox
+
+prepublish: lint tox
 
 clean:
 	rm -rf dist/ build/ *.egg-info coverage/ .coverage
