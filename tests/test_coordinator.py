@@ -257,6 +257,37 @@ class TestVivosunThermoSensorCoordinator:
         with pytest.raises(UpdateFailed, match="read boom"):
             await coordinator._read_sensor_data()
 
+    @pytest.mark.parametrize("size", [0, 4, 10], ids=["empty", "truncated", "one_byte_short"])
+    async def test_read_sensor_data_rejects_short_payload(
+        self, hass, mock_config_entry, mock_bleak_client, size
+    ):
+        """A frame too short to decode is a failed update, not a struct error."""
+
+        async def mock_notify(uuid, callback):
+            callback(None, bytearray(size))
+
+        mock_bleak_client.start_notify = AsyncMock(side_effect=mock_notify)
+
+        coordinator = VivosunThermoSensorCoordinator(hass, mock_config_entry)
+
+        with pytest.raises(UpdateFailed, match="need 11"):
+            await coordinator._read_sensor_data()
+
+    async def test_read_sensor_data_accepts_minimal_payload(
+        self, hass, mock_config_entry, mock_bleak_client
+    ):
+        """The shortest frame that carries every reading is still decoded."""
+
+        async def mock_notify(uuid, callback):
+            callback(None, bytearray(11))
+
+        mock_bleak_client.start_notify = AsyncMock(side_effect=mock_notify)
+
+        coordinator = VivosunThermoSensorCoordinator(hass, mock_config_entry)
+        data = await coordinator._read_sensor_data()
+
+        assert data["main"]["temperature_c"] == 0.0
+
     async def test_coordinator_initialization(self, hass, mock_config_entry):
         """Test coordinator initialization."""
         coordinator = VivosunThermoSensorCoordinator(hass, mock_config_entry)

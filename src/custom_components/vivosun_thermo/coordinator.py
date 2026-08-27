@@ -32,6 +32,9 @@ _EXTERNAL_HUMIDITY_OFFSET: Final = 9
 
 _VALUE_NONE: Final = -1
 
+# The external humidity reading sits last, so its int16 closes the shortest usable frame.
+_BLE_PAYLOAD_MIN_SIZE: Final = _EXTERNAL_HUMIDITY_OFFSET + 2
+
 
 class ProbeData(TypedDict):
     temperature_c: float
@@ -68,6 +71,10 @@ class VivosunThermoSensorCoordinator(DataUpdateCoordinator[SensorData]):
             # Teardown must never discard a good reading or mask the failure that caused it.
             with suppress(Exception):
                 await client.disconnect()
+        if len(data) < _BLE_PAYLOAD_MIN_SIZE:
+            raise UpdateFailed(
+                f"{self.discovery_address} sent {len(data)} bytes, " f"need {_BLE_PAYLOAD_MIN_SIZE}"
+            )
         return self._decode_raw_data(data)
 
     def _resolve_device(self) -> BLEDevice:
