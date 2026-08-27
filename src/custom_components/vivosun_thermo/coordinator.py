@@ -1,4 +1,5 @@
 from asyncio import Future, timeout, wait_for
+from contextlib import suppress
 from logging import getLogger
 from struct import unpack_from
 from typing import Any, Final, TypedDict, cast
@@ -61,7 +62,9 @@ class VivosunThermoSensorCoordinator(DataUpdateCoordinator):
         except BleakError as err:
             raise UpdateFailed(f"Failed to read {self.discovery_address}: {err}") from err
         finally:
-            await client.disconnect()
+            # Teardown must never discard a good reading or mask the failure that caused it.
+            with suppress(Exception):
+                await client.disconnect()
         return cast(dict, self._decode_raw_data(data))
 
     def _resolve_device(self) -> BLEDevice:

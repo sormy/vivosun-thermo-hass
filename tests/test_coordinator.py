@@ -229,6 +229,34 @@ class TestVivosunThermoSensorCoordinator:
 
         mock_bleak_client.disconnect.assert_awaited_once()
 
+    async def test_read_sensor_data_survives_failing_disconnect(
+        self, hass, config_entry_data, mock_bleak_client, valid_sensor_data_both_probes
+    ):
+        """A teardown failure must not discard a reading that already succeeded."""
+
+        async def mock_notify(uuid, callback):
+            callback(None, valid_sensor_data_both_probes)
+
+        mock_bleak_client.start_notify = AsyncMock(side_effect=mock_notify)
+        mock_bleak_client.disconnect = AsyncMock(side_effect=BleakError("disconnect failed"))
+
+        coordinator = VivosunThermoSensorCoordinator(hass, config_entry_data)
+        data = await coordinator._read_sensor_data()
+
+        assert data["main"]["temperature_c"] == 22.5
+
+    async def test_failing_disconnect_does_not_mask_read_error(
+        self, hass, config_entry_data, mock_bleak_client
+    ):
+        """The read failure, not the teardown failure, is what reaches the coordinator."""
+        mock_bleak_client.start_notify = AsyncMock(side_effect=BleakError("read boom"))
+        mock_bleak_client.disconnect = AsyncMock(side_effect=BleakError("disconnect failed"))
+
+        coordinator = VivosunThermoSensorCoordinator(hass, config_entry_data)
+
+        with pytest.raises(UpdateFailed, match="read boom"):
+            await coordinator._read_sensor_data()
+
     async def test_coordinator_initialization(self, hass, config_entry_data):
         """Test coordinator initialization."""
         coordinator = VivosunThermoSensorCoordinator(hass, config_entry_data)
