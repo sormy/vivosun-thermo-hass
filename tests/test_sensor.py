@@ -6,9 +6,14 @@ import pytest
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 from homeassistant.const import PERCENTAGE, UnitOfTemperature
 
-from custom_components.vivosun_thermo.const import DOMAIN
+from custom_components.vivosun_thermo.const import DOMAIN, SENSOR_TYPES
 from custom_components.vivosun_thermo.coordinator import VivosunThermoSensorCoordinator
 from custom_components.vivosun_thermo.sensor import VivosunThermoSensor, async_setup_entry
+
+
+def description(key):
+    """The SensorEntityDescription a platform would hand the entity for `key`."""
+    return next(d for d in SENSOR_TYPES if d.key == key)
 
 
 class TestVivosunThermoSensor:
@@ -21,15 +26,15 @@ class TestVivosunThermoSensor:
             "main": {"temperature_c": 22.5, "humidity": 65.0, "vpd": 0.95},
         }
 
-        sensor = VivosunThermoSensor(coordinator, "main", "temperature_c", mock_config_entry)
+        sensor = VivosunThermoSensor(coordinator, "main", description("temperature_c"))
 
-        assert sensor._attr_name == "VIVOSUN AeroLab THB1S Main Temperature"
-        assert sensor._attr_device_class == SensorDeviceClass.TEMPERATURE
-        assert sensor._attr_state_class == SensorStateClass.MEASUREMENT
-        assert sensor._attr_native_unit_of_measurement == UnitOfTemperature.CELSIUS
-        assert sensor._attr_suggested_display_precision == 1
+        assert sensor.name == "VIVOSUN AeroLab THB1S Main Temperature"
+        assert sensor.device_class == SensorDeviceClass.TEMPERATURE
+        assert sensor.state_class == SensorStateClass.MEASUREMENT
+        assert sensor.native_unit_of_measurement == UnitOfTemperature.CELSIUS
+        assert sensor.suggested_display_precision == 1
         assert sensor._attr_unique_id == "ThermoBeacon2-AA:BB:CC:DD:EE:FF-main-temperature_c"
-        assert sensor._attr_should_poll is False
+        assert sensor.should_poll is False
 
     async def test_sensor_attributes_humidity(self, hass, config_entry_data, mock_config_entry):
         """Test humidity sensor attributes."""
@@ -38,12 +43,12 @@ class TestVivosunThermoSensor:
             "main": {"temperature_c": 22.5, "humidity": 65.0, "vpd": 0.95},
         }
 
-        sensor = VivosunThermoSensor(coordinator, "main", "humidity", mock_config_entry)
+        sensor = VivosunThermoSensor(coordinator, "main", description("humidity"))
 
-        assert sensor._attr_name == "VIVOSUN AeroLab THB1S Main Humidity"
-        assert sensor._attr_device_class == SensorDeviceClass.HUMIDITY
-        assert sensor._attr_native_unit_of_measurement == PERCENTAGE
-        assert sensor._attr_suggested_display_precision == 0
+        assert sensor.name == "VIVOSUN AeroLab THB1S Main Humidity"
+        assert sensor.device_class == SensorDeviceClass.HUMIDITY
+        assert sensor.native_unit_of_measurement == PERCENTAGE
+        assert sensor.suggested_display_precision == 0
 
     async def test_sensor_attributes_vpd(self, hass, config_entry_data, mock_config_entry):
         """Test VPD sensor attributes."""
@@ -52,12 +57,12 @@ class TestVivosunThermoSensor:
             "main": {"temperature_c": 22.5, "humidity": 65.0, "vpd": 0.95},
         }
 
-        sensor = VivosunThermoSensor(coordinator, "main", "vpd", mock_config_entry)
+        sensor = VivosunThermoSensor(coordinator, "main", description("vpd"))
 
-        assert sensor._attr_name == "VIVOSUN AeroLab THB1S Main Vapor Pressure Deficit"
-        assert sensor._attr_device_class is None
-        assert sensor._attr_native_unit_of_measurement == "kPa"
-        assert sensor._attr_suggested_display_precision == 2
+        assert sensor.name == "VIVOSUN AeroLab THB1S Main Vapor Pressure Deficit"
+        assert sensor.device_class is None
+        assert sensor.native_unit_of_measurement == "kPa"
+        assert sensor.suggested_display_precision == 2
 
     async def test_sensor_native_value(self, hass, config_entry_data, mock_config_entry):
         """Test sensor native value property."""
@@ -67,18 +72,14 @@ class TestVivosunThermoSensor:
             "external": {"temperature_c": 18.0, "humidity": 70.0, "vpd": 0.62},
         }
 
-        sensor_main_temp = VivosunThermoSensor(
-            coordinator, "main", "temperature_c", mock_config_entry
-        )
+        sensor_main_temp = VivosunThermoSensor(coordinator, "main", description("temperature_c"))
         assert sensor_main_temp.native_value == 22.5
 
-        sensor_main_humidity = VivosunThermoSensor(
-            coordinator, "main", "humidity", mock_config_entry
-        )
+        sensor_main_humidity = VivosunThermoSensor(coordinator, "main", description("humidity"))
         assert sensor_main_humidity.native_value == 65.0
 
         sensor_external_temp = VivosunThermoSensor(
-            coordinator, "external", "temperature_c", mock_config_entry
+            coordinator, "external", description("temperature_c")
         )
         assert sensor_external_temp.native_value == 18.0
 
@@ -89,7 +90,7 @@ class TestVivosunThermoSensor:
             "main": {"temperature_c": 22.5, "humidity": 65.0, "vpd": 0.95},
         }
 
-        sensor = VivosunThermoSensor(coordinator, "main", "temperature_c", mock_config_entry)
+        sensor = VivosunThermoSensor(coordinator, "main", description("temperature_c"))
         assert sensor.available is True
 
     async def test_sensor_unavailable_without_data(
@@ -102,7 +103,7 @@ class TestVivosunThermoSensor:
             # external probe not connected
         }
 
-        sensor = VivosunThermoSensor(coordinator, "external", "temperature_c", mock_config_entry)
+        sensor = VivosunThermoSensor(coordinator, "external", description("temperature_c"))
         assert sensor.available is False
 
     async def test_sensor_device_info(self, hass, config_entry_data, mock_config_entry):
@@ -112,7 +113,7 @@ class TestVivosunThermoSensor:
             "main": {"temperature_c": 22.5, "humidity": 65.0, "vpd": 0.95},
         }
 
-        sensor = VivosunThermoSensor(coordinator, "main", "temperature_c", mock_config_entry)
+        sensor = VivosunThermoSensor(coordinator, "main", description("temperature_c"))
 
         assert sensor._attr_device_info["identifiers"] == {(DOMAIN, "AA:BB:CC:DD:EE:FF")}
         assert sensor._attr_device_info["name"] == "VIVOSUN AeroLab THB1S"
@@ -133,7 +134,7 @@ class TestVivosunThermoSensor:
             "main": {"temperature_c": 22.5, "humidity": 65.0, "vpd": 0.95},
         }
 
-        sensor = VivosunThermoSensor(coordinator, "main", "temperature_c", mock_config_entry)
+        sensor = VivosunThermoSensor(coordinator, "main", description("temperature_c"))
 
         assert sensor._attr_device_info["name"] == "UnknownDevice"
         assert sensor._attr_device_info["manufacturer"] is None
@@ -152,7 +153,7 @@ class TestVivosunThermoSensor:
         coordinator.data = {"main": {"temperature_c": 22.5}, "external": None}
         coordinator.last_update_success = last_update_success
 
-        sensor = VivosunThermoSensor(coordinator, "main", "temperature_c", mock_config_entry)
+        sensor = VivosunThermoSensor(coordinator, "main", description("temperature_c"))
 
         assert sensor.available is expected
 
@@ -164,7 +165,7 @@ class TestVivosunThermoSensor:
         coordinator.data = {"main": {"temperature_c": 22.5}, "external": None}
         coordinator.last_update_success = True
 
-        sensor = VivosunThermoSensor(coordinator, "external", "temperature_c", mock_config_entry)
+        sensor = VivosunThermoSensor(coordinator, "external", description("temperature_c"))
 
         assert sensor.available is False
 
@@ -233,9 +234,9 @@ class TestVivosunThermoSensor:
         }
 
         sensors = [
-            VivosunThermoSensor(coordinator, "main", "temperature_c", mock_config_entry),
-            VivosunThermoSensor(coordinator, "main", "humidity", mock_config_entry),
-            VivosunThermoSensor(coordinator, "external", "temperature_c", mock_config_entry),
+            VivosunThermoSensor(coordinator, "main", description("temperature_c")),
+            VivosunThermoSensor(coordinator, "main", description("humidity")),
+            VivosunThermoSensor(coordinator, "external", description("temperature_c")),
         ]
 
         unique_ids = [s._attr_unique_id for s in sensors]
