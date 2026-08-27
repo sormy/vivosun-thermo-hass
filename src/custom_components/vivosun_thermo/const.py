@@ -20,7 +20,7 @@ DEVICE_TYPES: Final = {
 
 DEFAULT_SCAN_INTERVAL: Final = timedelta(seconds=60)
 
-PROBE_TYPES = ["main", "external"]
+PROBE_TYPES: Final = ("main", "external")
 
 SENSOR_TYPES: Final = (
     SensorEntityDescription(

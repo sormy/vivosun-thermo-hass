@@ -73,7 +73,7 @@ class VivosunThermoSensorCoordinator(DataUpdateCoordinator[SensorData]):
                 await client.disconnect()
         if len(data) < _BLE_PAYLOAD_MIN_SIZE:
             raise UpdateFailed(
-                f"{self.discovery_address} sent {len(data)} bytes, " f"need {_BLE_PAYLOAD_MIN_SIZE}"
+                f"{self.discovery_address} sent {len(data)} bytes," f" need {_BLE_PAYLOAD_MIN_SIZE}"
             )
         return self._decode_raw_data(data)
 

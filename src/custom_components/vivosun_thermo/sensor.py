@@ -45,7 +45,7 @@ class VivosunThermoSensor(CoordinatorEntity[VivosunThermoSensorCoordinator], Sen
         self.probe_type = probe_type
         self.sensor_type = description.key
 
-        device_info = DEVICE_TYPES.get(coordinator.discovery_name, {})
+        device_type = DEVICE_TYPES.get(coordinator.discovery_name, {})
 
         self._attr_name = f"{probe_type.capitalize()} {description.name}"
         self._attr_unique_id = (
@@ -55,8 +55,8 @@ class VivosunThermoSensor(CoordinatorEntity[VivosunThermoSensorCoordinator], Sen
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, coordinator.discovery_address)},
             name=coordinator.name,
-            manufacturer=device_info.get("manufacturer"),
-            model=device_info.get("model"),
+            manufacturer=device_type.get("manufacturer"),
+            model=device_type.get("model"),
         )
 
     def _probe_data(self) -> ProbeData | None:
