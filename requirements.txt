@@ -1,5 +1,8 @@
 # same as here: https://raw.githubusercontent.com/home-assistant/core/2025.12.3/requirements_all.txt
 bleak~=1.0.1
-bleak-retry-connector~=4.4.4
+bleak-retry-connector~=4.4.3
+# Pinned because home-assistant-bluetooth asks only for habluetooth>=3.0, and 6.x
+# calls a bleak API that the pinned bleak does not have.
+habluetooth~=5.7.0
 voluptuous~=0.15.2
 homeassistant~=2025.12.3
