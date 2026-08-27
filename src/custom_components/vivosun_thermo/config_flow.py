@@ -1,4 +1,5 @@
 from logging import getLogger
+from typing import Any
 
 import voluptuous as vol
 from homeassistant.components.bluetooth import BluetoothServiceInfoBleak
@@ -37,11 +38,13 @@ class VivosunThermoConfigFlow(ConfigFlow, domain=DOMAIN):
         # Ask the user whether to set up the device
         return self.async_show_confirm()
 
-    async def async_step_user(self, user_input=None) -> ConfigFlowResult:
+    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         _LOGGER.debug("Attempt to manually add integration")
         return self.async_abort(reason="not_supported")
 
-    async def async_step_confirm(self, user_input=None) -> ConfigFlowResult:
+    async def async_step_confirm(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
         _LOGGER.debug("Confirming setup %s with user input %s", self.name, user_input)
 
         # Redisplay the form if the user hasn't confirmed yet
