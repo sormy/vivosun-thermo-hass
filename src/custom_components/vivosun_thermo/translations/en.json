@@ -4,7 +4,10 @@
         "step": {
             "confirm": {
                 "title": "Device Setup",
-                "description": "Please provide a name for the new device to be added:"
+                "description": "Please provide a name for the new device to be added:",
+                "data": {
+                    "name": "Name"
+                }
             }
         },
         "abort": {
