@@ -98,9 +98,8 @@ class BluetoothServiceInfoBleak:
             setattr(self, key, value)
 
 
-# Add src directory to path for imports
-src_path = Path(__file__).parent.parent / "src"
-sys.path.insert(0, str(src_path))
+# Add the repository root to the path so custom_components imports resolve
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from custom_components.vivosun_thermo.const import ConfigEntryData  # noqa: E402
 

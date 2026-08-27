@@ -12,27 +12,34 @@ VIVOSUN Thermo component for Home Assistant has these features:
 
 ## Installation
 
-1. Install component
+### HACS
 
-Below `/config` is Home Assistant `config` directory:
+Add `https://github.com/sormy/vivosun-thermo-hass` as a custom repository of type
+`Integration`, then download **VIVOSUN Thermo** and restart Home Assistant.
+
+### Manual
+
+Below `/config` is the Home Assistant `config` directory:
 
 ```sh
 cd /config
 mkdir -pv /config/custom_components
 cd /config/custom_components
 git clone https://github.com/sormy/vivosun-thermo-hass
-cp -rv vivosun-thermo-hass/src/custom_components/vivosun_thermo ./
+cp -rv vivosun-thermo-hass/custom_components/vivosun_thermo ./
 ```
 
-2. Then restart Home Assistant. For example, `ha core restart` for HASS OS.
-3. Navigate to Devices and Service
-4. Home Assistant supposed to prompt for installation.
-5. Enable pairing mode on device.
-6. Proceed with installation in Home Assistant prompt.
+Then restart Home Assistant, for example `ha core restart` on HASS OS.
+
+### Adding the device
+
+1. Navigate to Devices and Services.
+2. Enable pairing mode on the device.
+3. Home Assistant prompts to add it; proceed with the prompt.
 
 ## Updating
 
-For example, HASS OS recipe for copy/paste:
+HACS offers the update itself. For a manual install, on HASS OS:
 
 ```sh
 cd /config/custom_components
@@ -40,7 +47,7 @@ cd vivosun-thermo-hass
 git pull
 cd -
 rm -rf vivosun_thermo
-cp -rv vivosun-thermo-hass/src/custom_components/vivosun_thermo ./
+cp -rv vivosun-thermo-hass/custom_components/vivosun_thermo ./
 ha core restart
 ```
 
@@ -56,7 +63,7 @@ make setup
 
 | Target            | What it does                                          |
 | ----------------- | ----------------------------------------------------- |
-| `make format`     | Rewrites `src` and `tests` with black and isort        |
+| `make format`     | Rewrites `custom_components` and `tests` with black and isort |
 | `make lint`       | black, flake8, pyright and isort in check-only mode    |
 | `make test`       | pytest on the current interpreter                     |
 | `make test-cov`   | pytest with an HTML coverage report in `coverage/`     |
@@ -71,7 +78,7 @@ gate on your machine.
 The version appears in both `manifest.json` and `pyproject.toml`, and a test
 fails if they disagree.
 
-1. Bump `version` in `src/custom_components/vivosun_thermo/manifest.json` and
+1. Bump `version` in `custom_components/vivosun_thermo/manifest.json` and
    in `pyproject.toml` to the same value.
 2. Run `make prepublish`. This must pass on every supported interpreter before
    anything is tagged.
@@ -82,8 +89,9 @@ fails if they disagree.
     git push origin main --tags
     ```
 
-4. Publish a GitHub release for that tag. Home Assistant reads the version from
-   `manifest.json`, so the tag and that field must match.
+4. Publish a GitHub release for that tag. HACS reads the tag name of the latest
+   **release** — a pushed tag on its own is invisible to it — and Home Assistant
+   reads `manifest.json`, so the tag and that field must match.
 
 ## License
 

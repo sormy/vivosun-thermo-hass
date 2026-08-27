@@ -7,20 +7,20 @@ setup:
 	@echo "Setup complete! Activate with: source .venv/bin/activate"
 
 format:
-	.venv/bin/black src tests
-	.venv/bin/isort src tests
+	.venv/bin/black custom_components tests
+	.venv/bin/isort custom_components tests
 
 lint:
-	.venv/bin/black --check src tests
-	.venv/bin/flake8 src tests
-	.venv/bin/pyright src
-	.venv/bin/isort --check-only src tests
+	.venv/bin/black --check custom_components tests
+	.venv/bin/flake8 custom_components tests
+	.venv/bin/pyright custom_components
+	.venv/bin/isort --check-only custom_components tests
 
 test:
 	.venv/bin/pytest
 
 test-cov:
-	.venv/bin/pytest --cov=src/custom_components/vivosun_thermo --cov-report=html:coverage --cov-report=term-missing
+	.venv/bin/pytest --cov=custom_components/vivosun_thermo --cov-report=html:coverage --cov-report=term-missing
 
 tox:
 	.venv/bin/tox

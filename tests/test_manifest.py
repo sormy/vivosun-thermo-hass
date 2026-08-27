@@ -9,7 +9,9 @@ import pytest
 from custom_components.vivosun_thermo.const import DOMAIN
 
 _ROOT = Path(__file__).parent.parent
-_MANIFEST = _ROOT / "src" / "custom_components" / "vivosun_thermo" / "manifest.json"
+_CUSTOM_COMPONENTS = _ROOT / "custom_components"
+_MANIFEST = _CUSTOM_COMPONENTS / "vivosun_thermo" / "manifest.json"
+_HACS = _ROOT / "hacs.json"
 _PYPROJECT = _ROOT / "pyproject.toml"
 
 
@@ -43,3 +45,36 @@ class TestManifest:
         """A missing key here fails at integration load, not at test time."""
         for key in ("domain", "name", "version", "documentation", "codeowners", "iot_class"):
             assert manifest.get(key), f"manifest.json is missing {key}"
+
+
+class TestHacsLayout:
+    """HACS reads the repository root; nesting the integration hides it entirely."""
+
+    def test_custom_components_is_at_the_repository_root(self):
+        """HACS requires ROOT_OF_THE_REPO/custom_components/<domain>/."""
+        assert _CUSTOM_COMPONENTS.is_dir()
+        assert _MANIFEST.is_file()
+
+    def test_exactly_one_integration(self):
+        """HACS manages only the first subdirectory if there is more than one."""
+        found = [
+            d.name for d in _CUSTOM_COMPONENTS.iterdir() if d.is_dir() and d.name != "__pycache__"
+        ]
+        assert found == [DOMAIN]
+
+    def test_hacs_json_uses_only_supported_keys(self):
+        """Unsupported keys are ignored silently, so they read as working config."""
+        supported = {
+            "name",
+            "content_in_root",
+            "zip_release",
+            "filename",
+            "hide_default_branch",
+            "country",
+            "homeassistant",
+            "hacs",
+            "persistent_directory",
+        }
+        config = json.loads(_HACS.read_text())
+        assert not set(config) - supported
+        assert config["name"]

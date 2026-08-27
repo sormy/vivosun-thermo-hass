@@ -1,6 +1,4 @@
 {
     "name": "VIVOSUN Thermo",
-    "render_readme": true,
-    "content_in_root": false,
-    "domains": ["sensor"]
+    "homeassistant": "2025.12.3"
 }

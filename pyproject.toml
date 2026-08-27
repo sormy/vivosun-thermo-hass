@@ -31,6 +31,11 @@ readme = "README.md"
 requires-python = ">=3.13.2"
 version = "1.0.2"
 
+# Home Assistant loads custom_components/ directly; name it so a flat layout does not
+# make setuptools guess (and sweep in tests/).
+[tool.setuptools]
+packages = ["custom_components.vivosun_thermo"]
+
 [tool.setuptools.dynamic]
 dependencies = { file = ["requirements.txt"] }
 
@@ -50,7 +55,7 @@ max-line-length = 100
 extend-ignore = ["E203", "E501"]
 
 [tool.pytest.ini_options]
-pythonpath = ["src"]
+pythonpath = ["."]
 addopts = "-v"
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
@@ -60,6 +65,6 @@ testpaths = ["tests"]
 venvPath = "."
 venv = ".venv"
 pythonVersion = "3.13"
-include = ["src"]
+include = ["custom_components"]
 exclude = ["**/__pycache__", ".venv", "tests"]
 typeCheckingMode = "basic"
