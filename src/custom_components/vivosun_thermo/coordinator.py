@@ -107,12 +107,12 @@ class VivosunThermoSensorCoordinator(DataUpdateCoordinator[SensorData]):
     def _decode_int16(data: bytearray, offset: int) -> int:
         return unpack_from("<h", data, offset)[0]
 
-    @staticmethod
-    def _decode_float(data: bytearray, offset: int) -> float:
-        return unpack_from("<h", data, offset)[0] / 16
+    @classmethod
+    def _decode_float(cls, data: bytearray, offset: int) -> float:
+        return cls._decode_int16(data, offset) / 16
 
     @staticmethod
-    def _calculate_vpd(temp_c: float, humidity: float):
+    def _calculate_vpd(temp_c: float, humidity: float) -> float:
         # Calculate saturation vapor pressure (in kPa)
         svp = 0.61078 * 10 ** ((7.5 * temp_c) / (237.3 + temp_c))
         # Calculate actual vapor pressure (in kPa)
