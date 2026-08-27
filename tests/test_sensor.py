@@ -19,7 +19,7 @@ def description(key):
 class TestVivosunThermoSensor:
     """Test VivosunThermoSensor."""
 
-    async def test_sensor_attributes_temperature(self, hass, config_entry_data, mock_config_entry):
+    async def test_sensor_attributes_temperature(self, hass, mock_config_entry):
         """Test temperature sensor attributes."""
         coordinator = VivosunThermoSensorCoordinator(hass, mock_config_entry)
         coordinator.data = {
@@ -36,7 +36,7 @@ class TestVivosunThermoSensor:
         assert sensor._attr_unique_id == "ThermoBeacon2-AA:BB:CC:DD:EE:FF-main-temperature_c"
         assert sensor.should_poll is False
 
-    async def test_sensor_attributes_humidity(self, hass, config_entry_data, mock_config_entry):
+    async def test_sensor_attributes_humidity(self, hass, mock_config_entry):
         """Test humidity sensor attributes."""
         coordinator = VivosunThermoSensorCoordinator(hass, mock_config_entry)
         coordinator.data = {
@@ -50,7 +50,7 @@ class TestVivosunThermoSensor:
         assert sensor.native_unit_of_measurement == PERCENTAGE
         assert sensor.suggested_display_precision == 0
 
-    async def test_sensor_attributes_vpd(self, hass, config_entry_data, mock_config_entry):
+    async def test_sensor_attributes_vpd(self, hass, mock_config_entry):
         """Test VPD sensor attributes."""
         coordinator = VivosunThermoSensorCoordinator(hass, mock_config_entry)
         coordinator.data = {
@@ -64,7 +64,7 @@ class TestVivosunThermoSensor:
         assert sensor.native_unit_of_measurement == "kPa"
         assert sensor.suggested_display_precision == 2
 
-    async def test_sensor_native_value(self, hass, config_entry_data, mock_config_entry):
+    async def test_sensor_native_value(self, hass, mock_config_entry):
         """Test sensor native value property."""
         coordinator = VivosunThermoSensorCoordinator(hass, mock_config_entry)
         coordinator.data = {
@@ -83,7 +83,7 @@ class TestVivosunThermoSensor:
         )
         assert sensor_external_temp.native_value == 18.0
 
-    async def test_sensor_available_with_data(self, hass, config_entry_data, mock_config_entry):
+    async def test_sensor_available_with_data(self, hass, mock_config_entry):
         """Test sensor availability when data exists."""
         coordinator = VivosunThermoSensorCoordinator(hass, mock_config_entry)
         coordinator.data = {
@@ -93,9 +93,7 @@ class TestVivosunThermoSensor:
         sensor = VivosunThermoSensor(coordinator, "main", description("temperature_c"))
         assert sensor.available is True
 
-    async def test_sensor_unavailable_without_data(
-        self, hass, config_entry_data, mock_config_entry
-    ):
+    async def test_sensor_unavailable_without_data(self, hass, mock_config_entry):
         """Test sensor unavailability when probe data is missing."""
         coordinator = VivosunThermoSensorCoordinator(hass, mock_config_entry)
         coordinator.data = {
@@ -106,7 +104,7 @@ class TestVivosunThermoSensor:
         sensor = VivosunThermoSensor(coordinator, "external", description("temperature_c"))
         assert sensor.available is False
 
-    async def test_sensor_device_info(self, hass, config_entry_data, mock_config_entry):
+    async def test_sensor_device_info(self, hass, mock_config_entry):
         """Test sensor device info."""
         coordinator = VivosunThermoSensorCoordinator(hass, mock_config_entry)
         coordinator.data = {
@@ -120,7 +118,7 @@ class TestVivosunThermoSensor:
         assert sensor._attr_device_info["manufacturer"] == "VIVOSUN"
         assert sensor._attr_device_info["model"] == "THB1S"
 
-    async def test_sensor_device_info_unknown_device(self, hass, mock_config_entry):
+    async def test_sensor_device_info_unknown_device(self, hass):
         """Test sensor device info for unknown device type."""
         entry = MagicMock()
         entry.data = {
@@ -146,7 +144,7 @@ class TestVivosunThermoSensor:
         ids=["polling_ok", "polling_failed"],
     )
     async def test_available_follows_update_success(
-        self, hass, config_entry_data, mock_config_entry, last_update_success, expected
+        self, hass, mock_config_entry, last_update_success, expected
     ):
         """A device that stops answering must not keep serving its last reading."""
         coordinator = VivosunThermoSensorCoordinator(hass, mock_config_entry)
@@ -157,9 +155,7 @@ class TestVivosunThermoSensor:
 
         assert sensor.available is expected
 
-    async def test_available_false_for_absent_probe(
-        self, hass, config_entry_data, mock_config_entry
-    ):
+    async def test_available_false_for_absent_probe(self, hass, mock_config_entry):
         """An unplugged external probe stays unavailable even while polling succeeds."""
         coordinator = VivosunThermoSensorCoordinator(hass, mock_config_entry)
         coordinator.data = {"main": {"temperature_c": 22.5}, "external": None}
@@ -169,9 +165,7 @@ class TestVivosunThermoSensor:
 
         assert sensor.available is False
 
-    async def test_async_setup_entry_both_probes(
-        self, hass, mock_config_entry, config_entry_data, mock_bleak_client
-    ):
+    async def test_async_setup_entry_both_probes(self, hass, mock_config_entry):
         """Test async_setup_entry creates entities for both probes."""
         coordinator = VivosunThermoSensorCoordinator(hass, mock_config_entry)
         coordinator.data = {
@@ -199,9 +193,7 @@ class TestVivosunThermoSensor:
         sensor_types = {e.sensor_type for e in entities}
         assert sensor_types == {"temperature_c", "humidity", "vpd"}
 
-    async def test_async_setup_entry_main_probe_only(
-        self, hass, mock_config_entry, config_entry_data, mock_bleak_client
-    ):
+    async def test_async_setup_entry_main_probe_only(self, hass, mock_config_entry):
         """Test async_setup_entry creates entities only for main probe."""
         coordinator = VivosunThermoSensorCoordinator(hass, mock_config_entry)
         coordinator.data = {
@@ -225,7 +217,7 @@ class TestVivosunThermoSensor:
         probe_types = {e.probe_type for e in entities}
         assert probe_types == {"main"}
 
-    async def test_sensor_unique_ids_different(self, hass, config_entry_data, mock_config_entry):
+    async def test_sensor_unique_ids_different(self, hass, mock_config_entry):
         """Test that sensors have unique IDs."""
         coordinator = VivosunThermoSensorCoordinator(hass, mock_config_entry)
         coordinator.data = {
