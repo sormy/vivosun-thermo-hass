@@ -28,7 +28,7 @@ class TestVivosunThermoSensor:
 
         sensor = VivosunThermoSensor(coordinator, "main", description("temperature_c"))
 
-        assert sensor.name == "VIVOSUN AeroLab THB1S Main Temperature"
+        assert sensor.name == "Main Temperature"
         assert sensor.device_class == SensorDeviceClass.TEMPERATURE
         assert sensor.state_class == SensorStateClass.MEASUREMENT
         assert sensor.native_unit_of_measurement == UnitOfTemperature.CELSIUS
@@ -45,7 +45,7 @@ class TestVivosunThermoSensor:
 
         sensor = VivosunThermoSensor(coordinator, "main", description("humidity"))
 
-        assert sensor.name == "VIVOSUN AeroLab THB1S Main Humidity"
+        assert sensor.name == "Main Humidity"
         assert sensor.device_class == SensorDeviceClass.HUMIDITY
         assert sensor.native_unit_of_measurement == PERCENTAGE
         assert sensor.suggested_display_precision == 0
@@ -59,7 +59,7 @@ class TestVivosunThermoSensor:
 
         sensor = VivosunThermoSensor(coordinator, "main", description("vpd"))
 
-        assert sensor.name == "VIVOSUN AeroLab THB1S Main Vapor Pressure Deficit"
+        assert sensor.name == "Main Vapor Pressure Deficit"
         assert sensor.device_class is None
         assert sensor.native_unit_of_measurement == "kPa"
         assert sensor.suggested_display_precision == 2
@@ -136,7 +136,7 @@ class TestVivosunThermoSensor:
 
         sensor = VivosunThermoSensor(coordinator, "main", description("temperature_c"))
 
-        assert sensor._attr_device_info["name"] == "UnknownDevice"
+        assert sensor._attr_device_info["name"] == "Unknown Sensor"
         assert sensor._attr_device_info["manufacturer"] is None
         assert sensor._attr_device_info["model"] is None
 

@@ -30,6 +30,7 @@ async def async_setup_entry(
 
 
 class VivosunThermoSensor(CoordinatorEntity[VivosunThermoSensorCoordinator], SensorEntity):
+    _attr_has_entity_name = True
     _attr_should_poll = False
 
     def __init__(
@@ -46,14 +47,14 @@ class VivosunThermoSensor(CoordinatorEntity[VivosunThermoSensorCoordinator], Sen
 
         device_info = DEVICE_TYPES.get(coordinator.discovery_name, {})
 
-        self._attr_name = f"{coordinator.name} {probe_type.capitalize()} {description.name}"
+        self._attr_name = f"{probe_type.capitalize()} {description.name}"
         self._attr_unique_id = (
             f"{coordinator.discovery_name}-{coordinator.discovery_address}"
             f"-{probe_type}-{description.key}"
         )
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, coordinator.discovery_address)},
-            name=device_info.get("name", coordinator.discovery_name),
+            name=coordinator.name,
             manufacturer=device_info.get("manufacturer"),
             model=device_info.get("model"),
         )
