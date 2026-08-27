@@ -8,6 +8,7 @@ from bleak.backends.device import BLEDevice
 from bleak.exc import BleakError
 from bleak_retry_connector import BleakClientWithServiceCache, establish_connection
 from homeassistant.components import bluetooth
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
@@ -44,11 +45,13 @@ class SensorData(TypedDict):
 
 
 class VivosunThermoSensorCoordinator(DataUpdateCoordinator):
-    def __init__(self, hass: HomeAssistant, data: ConfigEntryData):
+    def __init__(self, hass: HomeAssistant, entry: ConfigEntry):
+        data = cast(ConfigEntryData, entry.data)
         super().__init__(
             hass,
             _LOGGER,
             name=data["name"],
+            config_entry=entry,
             update_interval=DEFAULT_SCAN_INTERVAL,
             update_method=self._read_sensor_data,
         )

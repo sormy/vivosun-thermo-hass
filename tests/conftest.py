@@ -24,8 +24,9 @@ sys.modules["pycares"] = pycares
 class MockDataUpdateCoordinator:
     """Mock DataUpdateCoordinator that doesn't require event loop."""
 
-    def __init__(self, hass, logger, *, name, update_interval, update_method):
+    def __init__(self, hass, logger, *, name, config_entry, update_interval, update_method):
         self.hass = hass
+        self.config_entry = config_entry
         self.logger = logger
         self.name = name
         self.update_interval = update_interval

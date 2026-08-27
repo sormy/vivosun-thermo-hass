@@ -1,5 +1,7 @@
 """Tests for vivosun_thermo sensor."""
 
+from unittest.mock import MagicMock
+
 import pytest
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 from homeassistant.const import PERCENTAGE, UnitOfTemperature
@@ -14,7 +16,7 @@ class TestVivosunThermoSensor:
 
     async def test_sensor_attributes_temperature(self, hass, config_entry_data, mock_config_entry):
         """Test temperature sensor attributes."""
-        coordinator = VivosunThermoSensorCoordinator(hass, config_entry_data)
+        coordinator = VivosunThermoSensorCoordinator(hass, mock_config_entry)
         coordinator.data = {
             "main": {"temperature_c": 22.5, "humidity": 65.0, "vpd": 0.95},
         }
@@ -31,7 +33,7 @@ class TestVivosunThermoSensor:
 
     async def test_sensor_attributes_humidity(self, hass, config_entry_data, mock_config_entry):
         """Test humidity sensor attributes."""
-        coordinator = VivosunThermoSensorCoordinator(hass, config_entry_data)
+        coordinator = VivosunThermoSensorCoordinator(hass, mock_config_entry)
         coordinator.data = {
             "main": {"temperature_c": 22.5, "humidity": 65.0, "vpd": 0.95},
         }
@@ -45,7 +47,7 @@ class TestVivosunThermoSensor:
 
     async def test_sensor_attributes_vpd(self, hass, config_entry_data, mock_config_entry):
         """Test VPD sensor attributes."""
-        coordinator = VivosunThermoSensorCoordinator(hass, config_entry_data)
+        coordinator = VivosunThermoSensorCoordinator(hass, mock_config_entry)
         coordinator.data = {
             "main": {"temperature_c": 22.5, "humidity": 65.0, "vpd": 0.95},
         }
@@ -59,7 +61,7 @@ class TestVivosunThermoSensor:
 
     async def test_sensor_native_value(self, hass, config_entry_data, mock_config_entry):
         """Test sensor native value property."""
-        coordinator = VivosunThermoSensorCoordinator(hass, config_entry_data)
+        coordinator = VivosunThermoSensorCoordinator(hass, mock_config_entry)
         coordinator.data = {
             "main": {"temperature_c": 22.5, "humidity": 65.0, "vpd": 0.95},
             "external": {"temperature_c": 18.0, "humidity": 70.0, "vpd": 0.62},
@@ -82,7 +84,7 @@ class TestVivosunThermoSensor:
 
     async def test_sensor_available_with_data(self, hass, config_entry_data, mock_config_entry):
         """Test sensor availability when data exists."""
-        coordinator = VivosunThermoSensorCoordinator(hass, config_entry_data)
+        coordinator = VivosunThermoSensorCoordinator(hass, mock_config_entry)
         coordinator.data = {
             "main": {"temperature_c": 22.5, "humidity": 65.0, "vpd": 0.95},
         }
@@ -94,7 +96,7 @@ class TestVivosunThermoSensor:
         self, hass, config_entry_data, mock_config_entry
     ):
         """Test sensor unavailability when probe data is missing."""
-        coordinator = VivosunThermoSensorCoordinator(hass, config_entry_data)
+        coordinator = VivosunThermoSensorCoordinator(hass, mock_config_entry)
         coordinator.data = {
             "main": {"temperature_c": 22.5, "humidity": 65.0, "vpd": 0.95},
             # external probe not connected
@@ -105,7 +107,7 @@ class TestVivosunThermoSensor:
 
     async def test_sensor_device_info(self, hass, config_entry_data, mock_config_entry):
         """Test sensor device info."""
-        coordinator = VivosunThermoSensorCoordinator(hass, config_entry_data)
+        coordinator = VivosunThermoSensorCoordinator(hass, mock_config_entry)
         coordinator.data = {
             "main": {"temperature_c": 22.5, "humidity": 65.0, "vpd": 0.95},
         }
@@ -119,13 +121,14 @@ class TestVivosunThermoSensor:
 
     async def test_sensor_device_info_unknown_device(self, hass, mock_config_entry):
         """Test sensor device info for unknown device type."""
-        config_data = {
+        entry = MagicMock()
+        entry.data = {
             "name": "Unknown Sensor",
             "discovery_name": "UnknownDevice",
             "discovery_address": "AA:BB:CC:DD:EE:FF",
         }
 
-        coordinator = VivosunThermoSensorCoordinator(hass, config_data)
+        coordinator = VivosunThermoSensorCoordinator(hass, entry)
         coordinator.data = {
             "main": {"temperature_c": 22.5, "humidity": 65.0, "vpd": 0.95},
         }
@@ -145,7 +148,7 @@ class TestVivosunThermoSensor:
         self, hass, config_entry_data, mock_config_entry, last_update_success, expected
     ):
         """A device that stops answering must not keep serving its last reading."""
-        coordinator = VivosunThermoSensorCoordinator(hass, config_entry_data)
+        coordinator = VivosunThermoSensorCoordinator(hass, mock_config_entry)
         coordinator.data = {"main": {"temperature_c": 22.5}, "external": None}
         coordinator.last_update_success = last_update_success
 
@@ -157,7 +160,7 @@ class TestVivosunThermoSensor:
         self, hass, config_entry_data, mock_config_entry
     ):
         """An unplugged external probe stays unavailable even while polling succeeds."""
-        coordinator = VivosunThermoSensorCoordinator(hass, config_entry_data)
+        coordinator = VivosunThermoSensorCoordinator(hass, mock_config_entry)
         coordinator.data = {"main": {"temperature_c": 22.5}, "external": None}
         coordinator.last_update_success = True
 
@@ -169,7 +172,7 @@ class TestVivosunThermoSensor:
         self, hass, mock_config_entry, config_entry_data, mock_bleak_client
     ):
         """Test async_setup_entry creates entities for both probes."""
-        coordinator = VivosunThermoSensorCoordinator(hass, config_entry_data)
+        coordinator = VivosunThermoSensorCoordinator(hass, mock_config_entry)
         coordinator.data = {
             "main": {"temperature_c": 22.5, "humidity": 65.0, "vpd": 0.95},
             "external": {"temperature_c": 18.0, "humidity": 70.0, "vpd": 0.62},
@@ -199,7 +202,7 @@ class TestVivosunThermoSensor:
         self, hass, mock_config_entry, config_entry_data, mock_bleak_client
     ):
         """Test async_setup_entry creates entities only for main probe."""
-        coordinator = VivosunThermoSensorCoordinator(hass, config_entry_data)
+        coordinator = VivosunThermoSensorCoordinator(hass, mock_config_entry)
         coordinator.data = {
             "main": {"temperature_c": 22.5, "humidity": 65.0, "vpd": 0.95},
             # external probe not connected
@@ -223,7 +226,7 @@ class TestVivosunThermoSensor:
 
     async def test_sensor_unique_ids_different(self, hass, config_entry_data, mock_config_entry):
         """Test that sensors have unique IDs."""
-        coordinator = VivosunThermoSensorCoordinator(hass, config_entry_data)
+        coordinator = VivosunThermoSensorCoordinator(hass, mock_config_entry)
         coordinator.data = {
             "main": {"temperature_c": 22.5, "humidity": 65.0, "vpd": 0.95},
             "external": {"temperature_c": 18.0, "humidity": 70.0, "vpd": 0.62},
