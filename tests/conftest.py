@@ -31,6 +31,7 @@ class MockDataUpdateCoordinator:
         self.update_interval = update_interval
         self._update_method = update_method
         self.data = {}
+        self.last_update_success = True
 
     async def async_config_entry_first_refresh(self):
         """Mock first refresh."""
@@ -64,7 +65,10 @@ update_coordinator_mock.UpdateFailed = MockUpdateFailed
 update_coordinator_mock.CoordinatorEntity = type(
     "CoordinatorEntity",
     (),
-    {"__init__": lambda self, coordinator: setattr(self, "coordinator", coordinator)},
+    {
+        "__init__": lambda self, coordinator: setattr(self, "coordinator", coordinator),
+        "available": property(lambda self: self.coordinator.last_update_success),
+    },
 )
 sys.modules["homeassistant.helpers.update_coordinator"] = update_coordinator_mock
 sys.modules["homeassistant.helpers.frame"] = Mock()

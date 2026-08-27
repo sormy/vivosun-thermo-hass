@@ -74,4 +74,4 @@ class VivosunThermoSensor(CoordinatorEntity, SensorEntity):
     @property
     @override
     def available(self) -> bool:  # type: ignore
-        return self.coordinator.data.get(self.probe_type) is not None
+        return super().available and self.coordinator.data.get(self.probe_type) is not None

@@ -1,5 +1,6 @@
 """Tests for vivosun_thermo sensor."""
 
+import pytest
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 from homeassistant.const import PERCENTAGE, UnitOfTemperature
 
@@ -134,6 +135,35 @@ class TestVivosunThermoSensor:
         assert sensor._attr_device_info["name"] == "UnknownDevice"
         assert sensor._attr_device_info["manufacturer"] is None
         assert sensor._attr_device_info["model"] is None
+
+    @pytest.mark.parametrize(
+        ("last_update_success", "expected"),
+        [(True, True), (False, False)],
+        ids=["polling_ok", "polling_failed"],
+    )
+    async def test_available_follows_update_success(
+        self, hass, config_entry_data, mock_config_entry, last_update_success, expected
+    ):
+        """A device that stops answering must not keep serving its last reading."""
+        coordinator = VivosunThermoSensorCoordinator(hass, config_entry_data)
+        coordinator.data = {"main": {"temperature_c": 22.5}, "external": None}
+        coordinator.last_update_success = last_update_success
+
+        sensor = VivosunThermoSensor(coordinator, "main", "temperature_c", mock_config_entry)
+
+        assert sensor.available is expected
+
+    async def test_available_false_for_absent_probe(
+        self, hass, config_entry_data, mock_config_entry
+    ):
+        """An unplugged external probe stays unavailable even while polling succeeds."""
+        coordinator = VivosunThermoSensorCoordinator(hass, config_entry_data)
+        coordinator.data = {"main": {"temperature_c": 22.5}, "external": None}
+        coordinator.last_update_success = True
+
+        sensor = VivosunThermoSensor(coordinator, "external", "temperature_c", mock_config_entry)
+
+        assert sensor.available is False
 
     async def test_async_setup_entry_both_probes(
         self, hass, mock_config_entry, config_entry_data, mock_bleak_client
