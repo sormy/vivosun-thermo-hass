@@ -104,6 +104,22 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from custom_components.vivosun_thermo.const import ConfigEntryData  # noqa: E402
 
 
+@pytest.fixture(autouse=True)
+def no_advertisement():
+    """Report no recent broadcast by default, so a poll takes the connection path."""
+    with (
+        patch(
+            "custom_components.vivosun_thermo.coordinator.bluetooth.async_address_present",
+            return_value=False,
+        ) as address_present,
+        patch(
+            "custom_components.vivosun_thermo.coordinator.bluetooth.async_last_service_info",
+            return_value=None,
+        ) as last_service_info,
+    ):
+        yield address_present, last_service_info
+
+
 @pytest.fixture
 def mock_bleak_client():
     """Mock a connected BLE client, wired into the coordinator's connect path."""

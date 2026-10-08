@@ -35,6 +35,20 @@ _VALUE_NONE: Final = -1
 # The external humidity reading sits last, so its int16 closes the shortest usable frame.
 _BLE_PAYLOAD_MIN_SIZE: Final = _EXTERNAL_HUMIDITY_OFFSET + 2
 
+# The device also broadcasts both probes in its manufacturer data, so a poll can be answered
+# without connecting. Payload (after the 2-byte company id): MAC reversed (6), an unknown uint16,
+# main temperature, main humidity, external temperature, external humidity (int16 / 16 each),
+# then a uint32 that counts seconds since power-up. 0x0019 is the regular advertisement; 0x8019
+# shows up after a button press, and Home Assistant keeps the last one of each, so the newer
+# counter wins.
+_ADV_MANUFACTURER_IDS: Final = (0x0019, 0x8019)
+_ADV_MAIN_TEMP_OFFSET: Final = 8
+_ADV_MAIN_HUMIDITY_OFFSET: Final = 10
+_ADV_EXTERNAL_TEMP_OFFSET: Final = 12
+_ADV_EXTERNAL_HUMIDITY_OFFSET: Final = 14
+_ADV_COUNTER_OFFSET: Final = 16
+_ADV_PAYLOAD_MIN_SIZE: Final = _ADV_COUNTER_OFFSET + 4
+
 
 class ProbeData(TypedDict):
     temperature_c: float
@@ -60,8 +74,14 @@ class VivosunThermoSensorCoordinator(DataUpdateCoordinator[SensorData]):
         )
         self.discovery_name = data["discovery_name"]
         self.discovery_address = data["discovery_address"]
+        self._last_adv_counter: int | None = None
 
     async def _read_sensor_data(self) -> SensorData:
+        # Prefer the broadcast: it needs no connection, which some proxies cannot make to this
+        # device (ESP32-C6 boards get "connection failed to be established", 0x3e).
+        advertised = self._read_advertisement()
+        if advertised is not None:
+            return advertised
         client = await self._connect()
         try:
             data = await self._read_raw_data(client)
@@ -76,6 +96,40 @@ class VivosunThermoSensorCoordinator(DataUpdateCoordinator[SensorData]):
                 f"{self.discovery_address} sent {len(data)} bytes," f" need {_BLE_PAYLOAD_MIN_SIZE}"
             )
         return self._decode_raw_data(data)
+
+    def _read_advertisement(self) -> SensorData | None:
+        if not bluetooth.async_address_present(
+            self.hass, self.discovery_address, connectable=False
+        ):
+            return None
+        info = bluetooth.async_last_service_info(
+            self.hass, self.discovery_address, connectable=False
+        )
+        if info is None:
+            return None
+        newest: tuple[int, bytes] | None = None
+        for manufacturer_id in _ADV_MANUFACTURER_IDS:
+            payload = info.manufacturer_data.get(manufacturer_id)
+            if payload is None or len(payload) < _ADV_PAYLOAD_MIN_SIZE:
+                continue
+            counter = unpack_from("<I", payload, _ADV_COUNTER_OFFSET)[0]
+            if newest is None or counter > newest[0]:
+                newest = (counter, payload)
+        if newest is None:
+            return None
+        counter, payload = newest
+        # An unchanged counter means nothing new was heard since the last poll; let the
+        # connection path try rather than repeat an old reading.
+        if counter == self._last_adv_counter:
+            return None
+        self._last_adv_counter = counter
+        return self._decode_frame(
+            bytearray(payload),
+            _ADV_MAIN_TEMP_OFFSET,
+            _ADV_MAIN_HUMIDITY_OFFSET,
+            _ADV_EXTERNAL_TEMP_OFFSET,
+            _ADV_EXTERNAL_HUMIDITY_OFFSET,
+        )
 
     def _resolve_device(self) -> BLEDevice:
         device = bluetooth.async_ble_device_from_address(
@@ -144,13 +198,30 @@ class VivosunThermoSensorCoordinator(DataUpdateCoordinator[SensorData]):
 
     @classmethod
     def _decode_raw_data(cls, data: bytearray) -> SensorData:
-        main_probe = cls._decode_probe_data(data, _MAIN_TEMP_OFFSET, _MAIN_HUMIDITY_OFFSET)
+        return cls._decode_frame(
+            data,
+            _MAIN_TEMP_OFFSET,
+            _MAIN_HUMIDITY_OFFSET,
+            _EXTERNAL_TEMP_OFFSET,
+            _EXTERNAL_HUMIDITY_OFFSET,
+        )
+
+    @classmethod
+    def _decode_frame(
+        cls,
+        data: bytearray,
+        main_temp_offset: int,
+        main_humidity_offset: int,
+        external_temp_offset: int,
+        external_humidity_offset: int,
+    ) -> SensorData:
+        main_probe = cls._decode_probe_data(data, main_temp_offset, main_humidity_offset)
         external_probe_available = (
-            cls._decode_int16(data, _EXTERNAL_TEMP_OFFSET) != _VALUE_NONE
-            and cls._decode_int16(data, _EXTERNAL_HUMIDITY_OFFSET) != _VALUE_NONE
+            cls._decode_int16(data, external_temp_offset) != _VALUE_NONE
+            and cls._decode_int16(data, external_humidity_offset) != _VALUE_NONE
         )
         external_probe = (
-            cls._decode_probe_data(data, _EXTERNAL_TEMP_OFFSET, _EXTERNAL_HUMIDITY_OFFSET)
+            cls._decode_probe_data(data, external_temp_offset, external_humidity_offset)
             if external_probe_available
             else None
         )

@@ -49,6 +49,14 @@ than the default branch.
 2. Enable pairing mode on the device.
 3. Home Assistant prompts to add it; proceed with the prompt.
 
+### How readings arrive
+
+The device broadcasts both probes in its Bluetooth advertisements, and each poll uses the latest
+one Home Assistant has heard, from any adapter or ESPHome Bluetooth proxy. It connects to the
+device only when no new broadcast has arrived since the previous poll. This matters for ESPHome
+proxies: ESP32-C6 boards cannot connect to the device at all (the connection fails with
+`0x3e`), but they hear its broadcasts fine.
+
 ## Updating
 
 HACS offers the update itself. A manual install updates by running the command
