@@ -14,5 +14,26 @@
             "not_supported": "This integration cannot be added manually. It requires automatic setup through discovery.",
             "already_configured": "Device is already configured"
         }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "title": "Readings",
+                "data": {
+                    "update_mode": "Update mode"
+                },
+                "data_description": {
+                    "update_mode": "Passive reads the readings the device broadcasts and never connects. Active connects to the device on every poll."
+                }
+            }
+        }
+    },
+    "selector": {
+        "update_mode": {
+            "options": {
+                "passive": "Passive (broadcasts)",
+                "active": "Active (connection)"
+            }
+        }
     }
 }

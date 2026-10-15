@@ -1,4 +1,5 @@
 from datetime import timedelta
+from enum import StrEnum
 from typing import Final, TypedDict
 
 from homeassistant.components.sensor import (
@@ -19,6 +20,15 @@ DEVICE_TYPES: Final = {
 }
 
 DEFAULT_SCAN_INTERVAL: Final = timedelta(seconds=60)
+
+
+class UpdateMode(StrEnum):
+    PASSIVE = "passive"
+    ACTIVE = "active"
+
+
+CONF_UPDATE_MODE: Final = "update_mode"
+DEFAULT_UPDATE_MODE: Final = UpdateMode.PASSIVE
 
 PROBE_TYPES: Final = ("main", "external")
 
@@ -57,3 +67,7 @@ class ConfigEntryData(TypedDict):
     name: str
     discovery_name: str
     discovery_address: str
+
+
+class ConfigEntryOptions(TypedDict, total=False):
+    update_mode: UpdateMode

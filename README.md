@@ -51,11 +51,13 @@ than the default branch.
 
 ### How readings arrive
 
-The device broadcasts both probes in its Bluetooth advertisements, and each poll uses the latest
-one Home Assistant has heard, from any adapter or ESPHome Bluetooth proxy. It connects to the
-device only when no new broadcast has arrived since the previous poll. This matters for ESPHome
-proxies: ESP32-C6 boards cannot connect to the device at all (the connection fails with
-`0x3e`), but they hear its broadcasts fine.
+The device's options offer two update modes:
+
+- **Passive** (default): each poll uses the latest broadcast Home Assistant has heard, from any
+  adapter or ESPHome Bluetooth proxy, without connecting to the device. Use this with ESP32-C6
+  proxies: they cannot connect to the device at all (the connection fails with `0x3e`), but they
+  hear its broadcasts fine.
+- **Active**: each poll connects to the device and asks for the readings.
 
 ## Updating
 

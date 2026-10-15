@@ -126,6 +126,7 @@ class TestVivosunThermoSensor:
             "discovery_name": "UnknownDevice",
             "discovery_address": "AA:BB:CC:DD:EE:FF",
         }
+        entry.options = {}
 
         coordinator = VivosunThermoSensorCoordinator(hass, entry)
         coordinator.data = {

@@ -3,10 +3,25 @@ from typing import Any
 
 import voluptuous as vol
 from homeassistant.components.bluetooth import BluetoothServiceInfoBleak
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant.config_entries import (
+    ConfigEntry,
+    ConfigFlow,
+    ConfigFlowResult,
+    OptionsFlowWithReload,
+)
 from homeassistant.const import ATTR_NAME
+from homeassistant.core import callback
+from homeassistant.helpers.selector import SelectSelector, SelectSelectorConfig
 
-from .const import DEVICE_TYPES, DOMAIN, ConfigEntryData
+from .const import (
+    CONF_UPDATE_MODE,
+    DEFAULT_UPDATE_MODE,
+    DEVICE_TYPES,
+    DOMAIN,
+    ConfigEntryData,
+    ConfigEntryOptions,
+    UpdateMode,
+)
 
 _LOGGER = getLogger(__name__)
 
@@ -17,6 +32,11 @@ class VivosunThermoConfigFlow(ConfigFlow, domain=DOMAIN):
     name: str
     discovery_name: str
     discovery_address: str
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry: ConfigEntry) -> "VivosunThermoOptionsFlow":
+        return VivosunThermoOptionsFlow()
 
     async def async_step_bluetooth(
         self, discovery_info: BluetoothServiceInfoBleak
@@ -68,4 +88,20 @@ class VivosunThermoConfigFlow(ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="confirm",
             data_schema=vol.Schema({vol.Optional(ATTR_NAME, default=self.name): str}),
+        )
+
+
+class VivosunThermoOptionsFlow(OptionsFlowWithReload):
+    async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        if user_input is not None:
+            return self.async_create_entry(
+                data=ConfigEntryOptions(update_mode=UpdateMode(user_input[CONF_UPDATE_MODE]))
+            )
+        update_mode = self.config_entry.options.get(CONF_UPDATE_MODE, DEFAULT_UPDATE_MODE)
+        selector = SelectSelector(
+            SelectSelectorConfig(options=list(UpdateMode), translation_key=CONF_UPDATE_MODE)
+        )
+        return self.async_show_form(
+            step_id="init",
+            data_schema=vol.Schema({vol.Required(CONF_UPDATE_MODE, default=update_mode): selector}),
         )

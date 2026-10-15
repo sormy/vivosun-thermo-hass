@@ -12,7 +12,13 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .const import DEFAULT_SCAN_INTERVAL, ConfigEntryData
+from .const import (
+    CONF_UPDATE_MODE,
+    DEFAULT_SCAN_INTERVAL,
+    DEFAULT_UPDATE_MODE,
+    ConfigEntryData,
+    UpdateMode,
+)
 
 _LOGGER = getLogger(__name__)
 
@@ -35,12 +41,9 @@ _VALUE_NONE: Final = -1
 # The external humidity reading sits last, so its int16 closes the shortest usable frame.
 _BLE_PAYLOAD_MIN_SIZE: Final = _EXTERNAL_HUMIDITY_OFFSET + 2
 
-# The device also broadcasts both probes in its manufacturer data, so a poll can be answered
-# without connecting. Payload (after the 2-byte company id): MAC reversed (6), an unknown uint16,
-# main temperature, main humidity, external temperature, external humidity (int16 / 16 each),
-# then a uint32 that counts seconds since power-up. 0x0019 is the regular advertisement; 0x8019
-# shows up after a button press, and Home Assistant keeps the last one of each, so the newer
-# counter wins.
+# Manufacturer data after the company id: MAC reversed (6), an unknown uint16, the four readings
+# (int16 / 16 each), then a uint32 counting seconds since power-up. 0x8019 follows a button press;
+# Home Assistant keeps the last record of each id, so the higher counter is the current one.
 _ADV_MANUFACTURER_IDS: Final = (0x0019, 0x8019)
 _ADV_MAIN_TEMP_OFFSET: Final = 8
 _ADV_MAIN_HUMIDITY_OFFSET: Final = 10
@@ -74,14 +77,14 @@ class VivosunThermoSensorCoordinator(DataUpdateCoordinator[SensorData]):
         )
         self.discovery_name = data["discovery_name"]
         self.discovery_address = data["discovery_address"]
-        self._last_adv_counter: int | None = None
+        self.update_mode = UpdateMode(entry.options.get(CONF_UPDATE_MODE, DEFAULT_UPDATE_MODE))
 
     async def _read_sensor_data(self) -> SensorData:
-        # Prefer the broadcast: it needs no connection, which some proxies cannot make to this
-        # device (ESP32-C6 boards get "connection failed to be established", 0x3e).
-        advertised = self._read_advertisement()
-        if advertised is not None:
-            return advertised
+        if self.update_mode is UpdateMode.PASSIVE:
+            return self._read_advertisement()
+        return await self._read_connection()
+
+    async def _read_connection(self) -> SensorData:
         client = await self._connect()
         try:
             data = await self._read_raw_data(client)
@@ -97,32 +100,21 @@ class VivosunThermoSensorCoordinator(DataUpdateCoordinator[SensorData]):
             )
         return self._decode_raw_data(data)
 
-    def _read_advertisement(self) -> SensorData | None:
-        if not bluetooth.async_address_present(
-            self.hass, self.discovery_address, connectable=False
-        ):
-            return None
+    def _read_advertisement(self) -> SensorData:
         info = bluetooth.async_last_service_info(
             self.hass, self.discovery_address, connectable=False
         )
         if info is None:
-            return None
-        newest: tuple[int, bytes] | None = None
-        for manufacturer_id in _ADV_MANUFACTURER_IDS:
-            payload = info.manufacturer_data.get(manufacturer_id)
-            if payload is None or len(payload) < _ADV_PAYLOAD_MIN_SIZE:
-                continue
-            counter = unpack_from("<I", payload, _ADV_COUNTER_OFFSET)[0]
-            if newest is None or counter > newest[0]:
-                newest = (counter, payload)
-        if newest is None:
-            return None
-        counter, payload = newest
-        # An unchanged counter means nothing new was heard since the last poll; let the
-        # connection path try rather than repeat an old reading.
-        if counter == self._last_adv_counter:
-            return None
-        self._last_adv_counter = counter
+            raise UpdateFailed(f"No broadcast heard from {self.discovery_address}")
+        records = [
+            payload
+            for manufacturer_id in _ADV_MANUFACTURER_IDS
+            if (payload := info.manufacturer_data.get(manufacturer_id)) is not None
+            and len(payload) >= _ADV_PAYLOAD_MIN_SIZE
+        ]
+        if not records:
+            raise UpdateFailed(f"No readings in the broadcast from {self.discovery_address}")
+        payload = max(records, key=lambda record: unpack_from("<I", record, _ADV_COUNTER_OFFSET))
         return self._decode_frame(
             bytearray(payload),
             _ADV_MAIN_TEMP_OFFSET,

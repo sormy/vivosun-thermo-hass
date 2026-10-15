@@ -101,23 +101,21 @@ class BluetoothServiceInfoBleak:
 # Add the repository root to the path so custom_components imports resolve
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from custom_components.vivosun_thermo.const import ConfigEntryData  # noqa: E402
+from custom_components.vivosun_thermo.const import (  # noqa: E402
+    CONF_UPDATE_MODE,
+    ConfigEntryData,
+    UpdateMode,
+)
 
 
-@pytest.fixture(autouse=True)
-def no_advertisement():
-    """Report no recent broadcast by default, so a poll takes the connection path."""
-    with (
-        patch(
-            "custom_components.vivosun_thermo.coordinator.bluetooth.async_address_present",
-            return_value=False,
-        ) as address_present,
-        patch(
-            "custom_components.vivosun_thermo.coordinator.bluetooth.async_last_service_info",
-            return_value=None,
-        ) as last_service_info,
-    ):
-        yield address_present, last_service_info
+@pytest.fixture
+def last_service_info():
+    """Mock the latest broadcast Home Assistant has heard from the device."""
+    with patch(
+        "custom_components.vivosun_thermo.coordinator.bluetooth.async_last_service_info",
+        return_value=None,
+    ) as last_service_info:
+        yield last_service_info
 
 
 @pytest.fixture
@@ -168,10 +166,11 @@ def config_entry_data():
 
 @pytest.fixture
 def mock_config_entry(config_entry_data):
-    """Mock config entry."""
+    """Mock config entry, polling over a connection."""
     entry = MagicMock()
     entry.entry_id = "test_entry_id"
     entry.data = config_entry_data
+    entry.options = {CONF_UPDATE_MODE: UpdateMode.ACTIVE}
     entry.title = "VIVOSUN AeroLab THB1S"
     return entry
 

@@ -8,6 +8,7 @@ import pytest
 from bleak.exc import BleakError
 from homeassistant.helpers.update_coordinator import UpdateFailed
 
+from custom_components.vivosun_thermo.const import CONF_UPDATE_MODE, UpdateMode
 from custom_components.vivosun_thermo.coordinator import VivosunThermoSensorCoordinator
 
 
@@ -342,36 +343,53 @@ class TestVivosunThermoSensorCoordinator:
         assert coordinator.data["main"]["temperature_c"] == 22.5
         assert coordinator.data["external"] is None
 
-    async def test_read_sensor_data_from_advertisement(
-        self, hass, mock_config_entry, no_advertisement
+    @pytest.mark.parametrize(
+        ("options", "expected"),
+        [
+            ({}, UpdateMode.PASSIVE),
+            ({CONF_UPDATE_MODE: "passive"}, UpdateMode.PASSIVE),
+            ({CONF_UPDATE_MODE: "active"}, UpdateMode.ACTIVE),
+        ],
+        ids=["default", "passive", "active"],
+    )
+    async def test_update_mode_from_options(self, hass, mock_config_entry, options, expected):
+        """The update mode comes from the entry options and defaults to passive."""
+        mock_config_entry.options = options
+
+        coordinator = VivosunThermoSensorCoordinator(hass, mock_config_entry)
+
+        assert coordinator.update_mode is expected
+
+    async def test_passive_reads_advertisement_without_connecting(
+        self, hass, mock_config_entry, last_service_info
     ):
-        """A fresh broadcast answers the poll without connecting."""
-        address_present, last_service_info = no_advertisement
-        address_present.return_value = True
+        """Passive mode answers the poll from the broadcast and never connects."""
+        mock_config_entry.options = {CONF_UPDATE_MODE: UpdateMode.PASSIVE}
         last_service_info.return_value = _service_info(
             {0x0019: _advertisement(360, 1040, 288, 1120, 100)}
         )
-
         coordinator = VivosunThermoSensorCoordinator(hass, mock_config_entry)
 
         with patch(
             "custom_components.vivosun_thermo.coordinator.establish_connection", AsyncMock()
         ) as connect:
-            data = await coordinator._read_sensor_data()
+            first = await coordinator._read_sensor_data()
+            second = await coordinator._read_sensor_data()
 
         connect.assert_not_called()
-        assert data["main"]["temperature_c"] == 22.5
-        assert data["main"]["humidity"] == 65.0
-        assert data["external"] is not None
-        assert data["external"]["temperature_c"] == 18.0
-        assert data["external"]["humidity"] == 70.0
+        assert first == second
+        assert first["main"]["temperature_c"] == 22.5
+        assert first["main"]["humidity"] == 65.0
+        assert first["external"] is not None
+        assert first["external"]["temperature_c"] == 18.0
+        assert first["external"]["humidity"] == 70.0
+        last_service_info.assert_called_with(hass, "AA:BB:CC:DD:EE:FF", connectable=False)
 
-    async def test_advertisement_without_external_probe(
-        self, hass, mock_config_entry, no_advertisement
+    async def test_passive_advertisement_without_external_probe(
+        self, hass, mock_config_entry, last_service_info
     ):
         """A broadcast with no external probe reports it as missing, like the status frame."""
-        address_present, last_service_info = no_advertisement
-        address_present.return_value = True
+        mock_config_entry.options = {CONF_UPDATE_MODE: UpdateMode.PASSIVE}
         last_service_info.return_value = _service_info(
             {0x0019: _advertisement(360, 1040, -1, -1, 100)}
         )
@@ -387,18 +405,17 @@ class TestVivosunThermoSensorCoordinator:
         [(200, 150, 22.5), (150, 200, 20.0)],
         ids=["regular_newer", "button_newer"],
     )
-    async def test_advertisement_newest_record_wins(
+    async def test_passive_newest_record_wins(
         self,
         hass,
         mock_config_entry,
-        no_advertisement,
+        last_service_info,
         regular_counter,
         button_counter,
         expected_temp,
     ):
         """Home Assistant keeps the last 0x0019 and 0x8019 records; the newer one is used."""
-        address_present, last_service_info = no_advertisement
-        address_present.return_value = True
+        mock_config_entry.options = {CONF_UPDATE_MODE: UpdateMode.PASSIVE}
         last_service_info.return_value = _service_info(
             {
                 0x0019: _advertisement(360, 1040, 288, 1120, regular_counter),
@@ -411,74 +428,57 @@ class TestVivosunThermoSensorCoordinator:
 
         assert data["main"]["temperature_c"] == expected_temp
 
-    async def test_unchanged_advertisement_falls_back_to_connection(
-        self,
-        hass,
-        mock_config_entry,
-        mock_bleak_client,
-        valid_sensor_data_main_only,
-        no_advertisement,
-    ):
-        """A broadcast that was already used is not repeated; the next poll connects instead."""
-        address_present, last_service_info = no_advertisement
-        address_present.return_value = True
+    async def test_passive_skips_short_record(self, hass, mock_config_entry, last_service_info):
+        """A truncated record is ignored when the other company id carries a full one."""
+        mock_config_entry.options = {CONF_UPDATE_MODE: UpdateMode.PASSIVE}
         last_service_info.return_value = _service_info(
-            {0x0019: _advertisement(320, 960, 288, 1120, 100)}
+            {0x0019: bytes(19), 0x8019: _advertisement(320, 960, -1, -1, 100)}
         )
 
-        async def mock_notify(uuid, callback):
-            callback(None, valid_sensor_data_main_only)
-
-        mock_bleak_client.start_notify = AsyncMock(side_effect=mock_notify)
-
         coordinator = VivosunThermoSensorCoordinator(hass, mock_config_entry)
-        first = await coordinator._read_sensor_data()
-        second = await coordinator._read_sensor_data()
+        data = await coordinator._read_sensor_data()
 
-        assert first["main"]["temperature_c"] == 20.0
-        assert second["main"]["temperature_c"] == 22.5
-        mock_bleak_client.start_notify.assert_called_once()
+        assert data["main"]["temperature_c"] == 20.0
 
     @pytest.mark.parametrize(
-        "manufacturer_data",
-        [{}, {0x0019: bytes(19)}, {0x1234: _advertisement(320, 960, 288, 1120, 100)}],
-        ids=["no_records", "short_record", "other_company"],
+        ("manufacturer_data", "message"),
+        [
+            (None, "No broadcast heard"),
+            ({}, "No readings"),
+            ({0x0019: bytes(19)}, "No readings"),
+            ({0x1234: _advertisement(320, 960, 288, 1120, 100)}, "No readings"),
+        ],
+        ids=["not_heard", "no_records", "short_record", "other_company"],
     )
-    async def test_unusable_advertisement_falls_back_to_connection(
-        self,
-        hass,
-        mock_config_entry,
-        mock_bleak_client,
-        valid_sensor_data_both_probes,
-        no_advertisement,
-        manufacturer_data,
+    async def test_passive_unusable_broadcast_fails_without_connecting(
+        self, hass, mock_config_entry, last_service_info, manufacturer_data, message
     ):
-        """A broadcast that cannot be decoded leaves the poll to the connection path."""
-        address_present, last_service_info = no_advertisement
-        address_present.return_value = True
-        last_service_info.return_value = _service_info(manufacturer_data)
-
-        async def mock_notify(uuid, callback):
-            callback(None, valid_sensor_data_both_probes)
-
-        mock_bleak_client.start_notify = AsyncMock(side_effect=mock_notify)
-
+        """Passive mode fails the poll rather than falling back to a connection."""
+        mock_config_entry.options = {CONF_UPDATE_MODE: UpdateMode.PASSIVE}
+        last_service_info.return_value = (
+            None if manufacturer_data is None else _service_info(manufacturer_data)
+        )
         coordinator = VivosunThermoSensorCoordinator(hass, mock_config_entry)
-        data = await coordinator._read_sensor_data()
 
-        assert data["main"]["temperature_c"] == 22.5
-        mock_bleak_client.start_notify.assert_called_once()
+        with (
+            patch(
+                "custom_components.vivosun_thermo.coordinator.establish_connection", AsyncMock()
+            ) as connect,
+            pytest.raises(UpdateFailed, match=message),
+        ):
+            await coordinator._read_sensor_data()
 
-    async def test_device_not_present_skips_advertisement(
+        connect.assert_not_called()
+
+    async def test_active_ignores_advertisement(
         self,
         hass,
         mock_config_entry,
         mock_bleak_client,
         valid_sensor_data_both_probes,
-        no_advertisement,
+        last_service_info,
     ):
-        """A device Home Assistant no longer hears is not read from its last broadcast."""
-        _, last_service_info = no_advertisement
+        """Active mode connects even when a broadcast is available."""
         last_service_info.return_value = _service_info(
             {0x0019: _advertisement(320, 960, 288, 1120, 100)}
         )
@@ -492,4 +492,5 @@ class TestVivosunThermoSensorCoordinator:
         data = await coordinator._read_sensor_data()
 
         assert data["main"]["temperature_c"] == 22.5
+        mock_bleak_client.start_notify.assert_called_once()
         last_service_info.assert_not_called()

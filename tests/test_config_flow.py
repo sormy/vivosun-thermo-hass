@@ -1,12 +1,20 @@
 """Tests for vivosun_thermo config flow."""
 
+import json
+from pathlib import Path
+from typing import Final
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from homeassistant.components.bluetooth import BluetoothServiceInfoBleak
+from homeassistant.config_entries import OptionsFlowWithReload
 from homeassistant.const import ATTR_NAME
+from homeassistant.data_entry_flow import FlowResultType
 
 from custom_components.vivosun_thermo.config_flow import VivosunThermoConfigFlow
+from custom_components.vivosun_thermo.const import CONF_UPDATE_MODE, UpdateMode
+
+TRANSLATIONS_PATH: Final = "custom_components/vivosun_thermo/translations/en.json"
 
 # pyright: reportTypedDictNotRequiredAccess=false
 
@@ -270,3 +278,50 @@ class TestVivosunThermoConfigFlow:
 
         assert result["title"] == expected
         assert result["data"]["name"] == expected
+
+
+class TestVivosunThermoOptionsFlow:
+    """Test VivosunThermoOptionsFlow."""
+
+    @staticmethod
+    def _flow(options):
+        flow = VivosunThermoConfigFlow.async_get_options_flow(MagicMock())
+        flow.hass = MagicMock()
+        flow.handler = "test_entry_id"
+        flow.hass.config_entries.async_get_known_entry.return_value.options = options
+        return flow
+
+    async def test_options_flow_reloads_entry(self):
+        """Changing the mode only takes effect once the coordinator is rebuilt."""
+        assert isinstance(self._flow({}), OptionsFlowWithReload)
+
+    @pytest.mark.parametrize(
+        ("options", "expected"),
+        [({}, UpdateMode.PASSIVE), ({CONF_UPDATE_MODE: UpdateMode.ACTIVE}, UpdateMode.ACTIVE)],
+        ids=["default", "saved"],
+    )
+    async def test_options_form_preselects_current_mode(self, options, expected):
+        """The form opens on the saved mode, or passive when none was saved."""
+        result = await self._flow(options).async_step_init()
+
+        assert result["type"] is FlowResultType.FORM
+        assert result["step_id"] == "init"
+        schema = result["data_schema"]
+        assert schema is not None
+        assert schema({}) == {CONF_UPDATE_MODE: expected}
+
+    @pytest.mark.parametrize("mode", list(UpdateMode))
+    async def test_options_saves_mode(self, mode):
+        """Submitting the form stores the chosen mode."""
+        result = await self._flow({}).async_step_init({CONF_UPDATE_MODE: mode.value})
+
+        assert result["type"] is FlowResultType.CREATE_ENTRY
+        assert result["data"] == {CONF_UPDATE_MODE: mode}
+
+    async def test_every_mode_has_a_label(self):
+        """A mode without a translation shows up as its raw key in the selector."""
+        translations = json.loads(
+            (Path(__file__).parent.parent / TRANSLATIONS_PATH).read_text(encoding="utf-8")
+        )
+
+        assert set(translations["selector"][CONF_UPDATE_MODE]["options"]) == set(UpdateMode)
