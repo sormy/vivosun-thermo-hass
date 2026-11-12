@@ -5,6 +5,7 @@ VIVOSUN Thermo component for Home Assistant has these features:
 -   Scan for nearby devices and add them into Home Assistant automatically with prompt.
 -   Read the current temperature, humidity from your deviceand and compute VPD.
 -   Supports both probes - main and external.
+-   Reports the battery voltage, from the device's broadcasts (passive mode only).
 
 ## Supported Devices
 
@@ -58,6 +59,11 @@ The device's options offer two update modes:
   proxies: they cannot connect to the device at all (the connection fails with `0x3e`), but they
   hear its broadcasts fine.
 - **Active**: each poll connects to the device and asks for the readings.
+
+**Battery Voltage** is a diagnostic sensor on the device, in passive mode only: the broadcast
+carries it, but the active-mode reply has no field known to be the battery. The device runs on
+three AAA cells, so fresh alkalines read about 4.8 to 5.0 V and are nearly spent around 3.3 V
+(1.1 V a cell). Rechargeable NiMH cells read lower for the same charge, about 3.6 to 4.0 V full.
 
 ## Updating
 

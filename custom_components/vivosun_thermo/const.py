@@ -7,7 +7,12 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import PERCENTAGE, EntityCategory, UnitOfTemperature
+from homeassistant.const import (
+    PERCENTAGE,
+    EntityCategory,
+    UnitOfElectricPotential,
+    UnitOfTemperature,
+)
 
 DOMAIN: Final = "vivosun_thermo"
 
@@ -60,6 +65,18 @@ SENSOR_TYPES: Final = (
         entity_category=EntityCategory.DIAGNOSTIC,
         suggested_display_precision=2,
     ),
+)
+
+# One per device, not per probe. Voltage rather than a percentage: the device takes three AAA
+# cells, and alkaline and NiMH cells sit at very different voltages for the same charge.
+BATTERY_VOLTAGE_SENSOR: Final = SensorEntityDescription(
+    key="battery_voltage",
+    name="Battery Voltage",
+    native_unit_of_measurement=UnitOfElectricPotential.VOLT,
+    device_class=SensorDeviceClass.VOLTAGE,
+    state_class=SensorStateClass.MEASUREMENT,
+    entity_category=EntityCategory.DIAGNOSTIC,
+    suggested_display_precision=2,
 )
 
 

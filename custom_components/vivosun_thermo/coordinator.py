@@ -41,10 +41,12 @@ _VALUE_NONE: Final = -1
 # The external humidity reading sits last, so its int16 closes the shortest usable frame.
 _BLE_PAYLOAD_MIN_SIZE: Final = _EXTERNAL_HUMIDITY_OFFSET + 2
 
-# Manufacturer data after the company id: MAC reversed (6), an unknown uint16, the four readings
-# (int16 / 16 each), then a uint32 counting seconds since power-up. 0x8019 follows a button press;
-# Home Assistant keeps the last record of each id, so the higher counter is the current one.
+# Manufacturer data after the company id: MAC reversed (6), the battery voltage in millivolts
+# (uint16), the four readings (int16 / 16 each), then a uint32 counting seconds since power-up.
+# 0x8019 follows a button press; Home Assistant keeps the last record of each id, so the higher
+# counter is the current one.
 _ADV_MANUFACTURER_IDS: Final = (0x0019, 0x8019)
+_ADV_BATTERY_MV_OFFSET: Final = 6
 _ADV_MAIN_TEMP_OFFSET: Final = 8
 _ADV_MAIN_HUMIDITY_OFFSET: Final = 10
 _ADV_EXTERNAL_TEMP_OFFSET: Final = 12
@@ -62,6 +64,8 @@ class ProbeData(TypedDict):
 class SensorData(TypedDict):
     main: ProbeData
     external: ProbeData | None
+    # Volts. Only the broadcast carries it, so it is None in active mode.
+    battery_voltage: float | None
 
 
 class VivosunThermoSensorCoordinator(DataUpdateCoordinator[SensorData]):
@@ -115,13 +119,15 @@ class VivosunThermoSensorCoordinator(DataUpdateCoordinator[SensorData]):
         if not records:
             raise UpdateFailed(f"No readings in the broadcast from {self.discovery_address}")
         payload = max(records, key=lambda record: unpack_from("<I", record, _ADV_COUNTER_OFFSET))
-        return self._decode_frame(
+        data = self._decode_frame(
             bytearray(payload),
             _ADV_MAIN_TEMP_OFFSET,
             _ADV_MAIN_HUMIDITY_OFFSET,
             _ADV_EXTERNAL_TEMP_OFFSET,
             _ADV_EXTERNAL_HUMIDITY_OFFSET,
         )
+        data["battery_voltage"] = unpack_from("<H", payload, _ADV_BATTERY_MV_OFFSET)[0] / 1000
+        return data
 
     def _resolve_device(self) -> BLEDevice:
         device = bluetooth.async_ble_device_from_address(
@@ -217,4 +223,4 @@ class VivosunThermoSensorCoordinator(DataUpdateCoordinator[SensorData]):
             if external_probe_available
             else None
         )
-        return SensorData(main=main_probe, external=external_probe)
+        return SensorData(main=main_probe, external=external_probe, battery_voltage=None)
