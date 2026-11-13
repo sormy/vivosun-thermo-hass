@@ -1,6 +1,10 @@
 """The lookup tables must agree with the shape the coordinator decodes."""
 
-from custom_components.vivosun_thermo.const import PROBE_TYPES, SENSOR_TYPES
+from custom_components.vivosun_thermo.const import (
+    BATTERY_VOLTAGE_SENSOR,
+    PROBE_TYPES,
+    SENSOR_TYPES,
+)
 from custom_components.vivosun_thermo.coordinator import ProbeData, SensorData
 
 
@@ -13,7 +17,12 @@ class TestTablesMatchDecodedShape:
 
     def test_probe_types_cover_decoded_probes(self):
         """A probe absent from the table gets no entities; an unknown one gets dead ones."""
-        assert set(PROBE_TYPES) == set(SensorData.__annotations__)
+        device_readings = {BATTERY_VOLTAGE_SENSOR.key}
+        assert set(PROBE_TYPES) == set(SensorData.__annotations__) - device_readings
+
+    def test_battery_sensor_key_is_decoded(self):
+        """The battery sensor reads its key straight from the decoded data."""
+        assert BATTERY_VOLTAGE_SENSOR.key in SensorData.__annotations__
 
     def test_sensor_type_keys_are_unique(self):
         """Duplicate keys would build two entities sharing a unique_id."""

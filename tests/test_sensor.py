@@ -4,11 +4,20 @@ from unittest.mock import MagicMock
 
 import pytest
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
-from homeassistant.const import PERCENTAGE, UnitOfTemperature
+from homeassistant.const import (
+    PERCENTAGE,
+    EntityCategory,
+    UnitOfElectricPotential,
+    UnitOfTemperature,
+)
 
 from custom_components.vivosun_thermo.const import DOMAIN, SENSOR_TYPES
 from custom_components.vivosun_thermo.coordinator import VivosunThermoSensorCoordinator
-from custom_components.vivosun_thermo.sensor import VivosunThermoSensor, async_setup_entry
+from custom_components.vivosun_thermo.sensor import (
+    VivosunThermoBatterySensor,
+    VivosunThermoSensor,
+    async_setup_entry,
+)
 
 
 def description(key):
@@ -234,3 +243,57 @@ class TestVivosunThermoSensor:
 
         unique_ids = [s._attr_unique_id for s in sensors]
         assert len(unique_ids) == len(set(unique_ids))  # All unique
+
+    async def test_battery_sensor_attributes(self, hass, mock_config_entry):
+        """The battery sensor is one per device, a diagnostic voltage."""
+        coordinator = VivosunThermoSensorCoordinator(hass, mock_config_entry)
+        coordinator.data = {
+            "main": {"temperature_c": 22.5, "humidity": 65.0, "vpd": 0.95},
+            "battery_voltage": 4.51,
+        }
+
+        sensor = VivosunThermoBatterySensor(coordinator)
+
+        assert sensor.name == "Battery Voltage"
+        assert sensor.device_class == SensorDeviceClass.VOLTAGE
+        assert sensor.state_class == SensorStateClass.MEASUREMENT
+        assert sensor.native_unit_of_measurement == UnitOfElectricPotential.VOLT
+        assert sensor.entity_category == EntityCategory.DIAGNOSTIC
+        assert sensor.suggested_display_precision == 2
+        assert sensor._attr_unique_id == "ThermoBeacon2-AA:BB:CC:DD:EE:FF-battery_voltage"
+        assert sensor._attr_device_info["identifiers"] == {(DOMAIN, "AA:BB:CC:DD:EE:FF")}
+        assert sensor.native_value == 4.51
+        assert sensor.available is True
+
+    async def test_battery_sensor_unavailable_without_voltage(self, hass, mock_config_entry):
+        """Active mode has no battery reading, so the sensor is unavailable."""
+        coordinator = VivosunThermoSensorCoordinator(hass, mock_config_entry)
+        coordinator.data = {
+            "main": {"temperature_c": 22.5, "humidity": 65.0, "vpd": 0.95},
+            "battery_voltage": None,
+        }
+
+        sensor = VivosunThermoBatterySensor(coordinator)
+
+        assert sensor.native_value is None
+        assert sensor.available is False
+
+    async def test_async_setup_entry_adds_battery_sensor(self, hass, mock_config_entry):
+        """A battery reading at setup adds one battery sensor beside the probe sensors."""
+        coordinator = VivosunThermoSensorCoordinator(hass, mock_config_entry)
+        coordinator.data = {
+            "main": {"temperature_c": 22.5, "humidity": 65.0, "vpd": 0.95},
+            "battery_voltage": 4.51,
+        }
+
+        mock_config_entry.runtime_data = coordinator
+
+        entities = []
+
+        def mock_add_entities(new_entities):
+            entities.extend(new_entities)
+
+        await async_setup_entry(hass, mock_config_entry, mock_add_entities)
+
+        assert len(entities) == 4
+        assert sum(isinstance(e, VivosunThermoBatterySensor) for e in entities) == 1

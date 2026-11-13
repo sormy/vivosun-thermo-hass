@@ -12,11 +12,13 @@ from custom_components.vivosun_thermo.const import CONF_UPDATE_MODE, UpdateMode
 from custom_components.vivosun_thermo.coordinator import VivosunThermoSensorCoordinator
 
 
-def _advertisement(main_temp, main_humidity, external_temp, external_humidity, counter):
-    """Broadcast payload for AA:BB:CC:DD:EE:FF: the address reversed, an unknown uint16, the
-    four readings (int16 / 16) and the seconds-since-power-up counter."""
+def _advertisement(
+    main_temp, main_humidity, external_temp, external_humidity, counter, battery_mv=4960
+):
+    """Broadcast payload for AA:BB:CC:DD:EE:FF: the address reversed, the battery voltage in
+    millivolts (uint16), the four readings (int16 / 16) and the seconds-since-power-up counter."""
     return bytes.fromhex("ffeeddccbbaa") + pack(
-        "<HhhhhI", 0x1360, main_temp, main_humidity, external_temp, external_humidity, counter
+        "<HhhhhI", battery_mv, main_temp, main_humidity, external_temp, external_humidity, counter
     )
 
 
@@ -101,6 +103,7 @@ class TestVivosunThermoSensorCoordinator:
         assert result["external"]["temperature_c"] == 18.0
         assert result["external"]["humidity"] == 70.0
         assert 0.5 < result["external"]["vpd"] < 0.7
+        assert result["battery_voltage"] is None
 
     async def test_decode_raw_data_main_only(self, valid_sensor_data_main_only):
         """Test decoding data with only main probe connected."""
@@ -383,6 +386,7 @@ class TestVivosunThermoSensorCoordinator:
         assert first["external"] is not None
         assert first["external"]["temperature_c"] == 18.0
         assert first["external"]["humidity"] == 70.0
+        assert first["battery_voltage"] == 4.96
         last_service_info.assert_called_with(hass, "AA:BB:CC:DD:EE:FF", connectable=False)
 
     async def test_passive_advertisement_without_external_probe(
@@ -401,8 +405,8 @@ class TestVivosunThermoSensorCoordinator:
         assert data["external"] is None
 
     @pytest.mark.parametrize(
-        ("regular_counter", "button_counter", "expected_temp"),
-        [(200, 150, 22.5), (150, 200, 20.0)],
+        ("regular_counter", "button_counter", "expected_temp", "expected_battery"),
+        [(200, 150, 22.5, 4.51), (150, 200, 20.0, 4.5)],
         ids=["regular_newer", "button_newer"],
     )
     async def test_passive_newest_record_wins(
@@ -413,13 +417,14 @@ class TestVivosunThermoSensorCoordinator:
         regular_counter,
         button_counter,
         expected_temp,
+        expected_battery,
     ):
         """Home Assistant keeps the last 0x0019 and 0x8019 records; the newer one is used."""
         mock_config_entry.options = {CONF_UPDATE_MODE: UpdateMode.PASSIVE}
         last_service_info.return_value = _service_info(
             {
-                0x0019: _advertisement(360, 1040, 288, 1120, regular_counter),
-                0x8019: _advertisement(320, 960, 288, 1120, button_counter),
+                0x0019: _advertisement(360, 1040, 288, 1120, regular_counter, 4510),
+                0x8019: _advertisement(320, 960, 288, 1120, button_counter, 4500),
             }
         )
 
@@ -427,6 +432,7 @@ class TestVivosunThermoSensorCoordinator:
         data = await coordinator._read_sensor_data()
 
         assert data["main"]["temperature_c"] == expected_temp
+        assert data["battery_voltage"] == expected_battery
 
     async def test_passive_skips_short_record(self, hass, mock_config_entry, last_service_info):
         """A truncated record is ignored when the other company id carries a full one."""
@@ -492,5 +498,6 @@ class TestVivosunThermoSensorCoordinator:
         data = await coordinator._read_sensor_data()
 
         assert data["main"]["temperature_c"] == 22.5
+        assert data["battery_voltage"] is None
         mock_bleak_client.start_notify.assert_called_once()
         last_service_info.assert_not_called()
